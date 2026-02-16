@@ -15,7 +15,7 @@ interface SpeechRecognitionEvent {
 
 const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const isMobile = useIsMobile();
-  const [speed, setSpeed] = useState(3);
+  const [speed, setSpeed] = useState(1);
   const [fontSize, setFontSize] = useState(() => (window.innerWidth < 768 ? 28 : 42));
   const [mirrored, setMirrored] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -26,13 +26,12 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
   const recognitionRef = useRef<any>(null);
-  const lastWordTimeRef = useRef<number>(Date.now());
-  const wordsPerSecondRef = useRef<number>(2);
 
   // Smooth scrolling via requestAnimationFrame
   const scroll = useCallback(() => {
     if (scrollRef.current && playing) {
-      scrollRef.current.scrollTop += speed * 0.5;
+      // Map speed 1-10 to pixels: speed 1 = 0.3px/frame, speed 10 = 3px/frame
+      scrollRef.current.scrollTop += speed * 0.3;
     }
     animRef.current = requestAnimationFrame(scroll);
   }, [playing, speed]);
@@ -60,10 +59,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      // Smooth: scroll up = faster, scroll down = slower
       if (e.deltaY < 0) {
-        setSpeed((s) => Math.min(s + 1, 10));
+        setSpeed((s) => Math.min(Math.round((s + 0.5) * 10) / 10, 10));
       } else {
-        setSpeed((s) => Math.max(s - 1, 1));
+        setSpeed((s) => Math.max(Math.round((s - 0.5) * 10) / 10, 1));
       }
     };
     el.addEventListener("wheel", onWheel, { passive: false });
@@ -91,46 +91,70 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   // Voice recognition for speed adaptation
   const startVoice = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!SpeechRecognition) {
+      console.error("Speech recognition not supported");
+      return;
+    }
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = voiceLang;
 
+    let lastResultTime = Date.now();
+    let totalWords = 0;
+    let sessionStart = Date.now();
+
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const now = Date.now();
-      const elapsed = (now - lastWordTimeRef.current) / 1000;
-      lastWordTimeRef.current = now;
+      // Count total final words in this session
+      let finalWordCount = 0;
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalWordCount += event.results[i][0].transcript.trim().split(/\s+/).length;
+        }
+      }
 
-      // Count words in latest result
-      const latest = event.results[event.results.length - 1];
-      const words = latest[0].transcript.trim().split(/\s+/).length;
-
-      if (elapsed > 0 && elapsed < 5) {
-        const wps = words / elapsed;
-        wordsPerSecondRef.current = wordsPerSecondRef.current * 0.7 + wps * 0.3;
-        // Map words per second (1-5) to speed (1-10)
-        const mappedSpeed = Math.round(Math.min(10, Math.max(1, wordsPerSecondRef.current * 2)));
-        setSpeed(mappedSpeed);
+      if (finalWordCount > totalWords) {
+        totalWords = finalWordCount;
+        const elapsedSeconds = (now - sessionStart) / 1000;
+        if (elapsedSeconds > 1) {
+          const wps = totalWords / elapsedSeconds;
+          // Map WPS (0.5-4) to speed (1-10): typical speech is ~2-3 wps
+          const mappedSpeed = Math.round(Math.min(10, Math.max(1, wps * 2.5)));
+          setSpeed(mappedSpeed);
+        }
+        lastResultTime = now;
       }
     };
 
-    recognition.onerror = () => {
-      setVoiceActive(false);
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setVoiceActive(false);
+        recognitionRef.current = null;
+      }
+      // "no-speech" errors are normal, onend will restart
     };
 
     recognition.onend = () => {
-      // Restart if still active
-      if (recognitionRef.current) {
-        try { recognition.start(); } catch { setVoiceActive(false); }
+      // Auto-restart if still active
+      if (recognitionRef.current === recognition) {
+        try { recognition.start(); } catch { 
+          setVoiceActive(false);
+          recognitionRef.current = null;
+        }
       }
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
-    setVoiceActive(true);
-    lastWordTimeRef.current = Date.now();
+    try {
+      recognition.start();
+      setVoiceActive(true);
+    } catch {
+      setVoiceActive(false);
+      recognitionRef.current = null;
+    }
   }, [voiceLang]);
 
   const stopVoice = useCallback(() => {
@@ -153,40 +177,21 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setVoiceLang(newLang);
     if (voiceActive) {
       stopVoice();
-      // Restart with new lang after a tick
-      setTimeout(() => {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) return;
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = newLang;
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-          const now = Date.now();
-          const elapsed = (now - lastWordTimeRef.current) / 1000;
-          lastWordTimeRef.current = now;
-          const latest = event.results[event.results.length - 1];
-          const words = latest[0].transcript.trim().split(/\s+/).length;
-          if (elapsed > 0 && elapsed < 5) {
-            const wps = words / elapsed;
-            wordsPerSecondRef.current = wordsPerSecondRef.current * 0.7 + wps * 0.3;
-            const mappedSpeed = Math.round(Math.min(10, Math.max(1, wordsPerSecondRef.current * 2)));
-            setSpeed(mappedSpeed);
-          }
-        };
-        recognition.onerror = () => setVoiceActive(false);
-        recognition.onend = () => {
-          if (recognitionRef.current) {
-            try { recognition.start(); } catch { setVoiceActive(false); }
-          }
-        };
-        recognitionRef.current = recognition;
-        recognition.start();
-        setVoiceActive(true);
-        lastWordTimeRef.current = Date.now();
-      }, 100);
+      // Restart with new lang after a tick (startVoice uses voiceLang from state,
+      // but since setState is async, we restart via timeout after state updates)
     }
   };
+
+  // Restart voice when language changes
+  const prevLangRef = useRef(voiceLang);
+  useEffect(() => {
+    if (prevLangRef.current !== voiceLang && !voiceActive) {
+      const timer = setTimeout(() => startVoice(), 150);
+      prevLangRef.current = voiceLang;
+      return () => clearTimeout(timer);
+    }
+    prevLangRef.current = voiceLang;
+  }, [voiceLang, voiceActive, startVoice]);
 
   return (
     <div

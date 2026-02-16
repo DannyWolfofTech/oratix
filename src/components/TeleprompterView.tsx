@@ -17,7 +17,7 @@ interface SpeechRecognitionEvent {
 const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const isMobile = useIsMobile();
   const { t, lang } = useLanguage();
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(1.5);
   const [fontSize, setFontSize] = useState(() => (window.innerWidth < 768 ? 28 : 42));
   const [mirrored, setMirrored] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -52,8 +52,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
-      if (e.key === "ArrowUp") setSpeed((s) => Math.min(s + 1, 10));
-      if (e.key === "ArrowDown") setSpeed((s) => Math.max(s - 1, 1));
+      if (e.key === "ArrowUp") setSpeed((s) => Math.min(s + 0.5, 10));
+      if (e.key === "ArrowDown") setSpeed((s) => Math.max(s - 0.5, 1));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -101,6 +101,55 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     return () => clearTimeout(controlsTimeoutRef.current);
   }, [playing, isMobile]);
 
+  // Voice commands recognition (Start/Stop/Restart)
+  const startVoiceCommands = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const cmdRecognition = new SpeechRecognition();
+    cmdRecognition.continuous = true;
+    cmdRecognition.interimResults = false;
+    cmdRecognition.lang = voiceLang;
+
+    cmdRecognition.onresult = (event: SpeechRecognitionEvent) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          const transcript = event.results[i][0].transcript.trim().toLowerCase();
+          if (transcript.includes("start") || transcript.includes("pornește") || transcript.includes("play")) {
+            setPlaying(true);
+          } else if (transcript.includes("stop") || transcript.includes("oprește") || transcript.includes("pause") || transcript.includes("pauză")) {
+            setPlaying(false);
+          } else if (transcript.includes("restart") || transcript.includes("repornește") || transcript.includes("reset")) {
+            if (scrollRef.current) scrollRef.current.scrollTop = 0;
+            setPlaying(true);
+          }
+        }
+      }
+    };
+
+    cmdRecognition.onend = () => {
+      if (recognitionRef.current === cmdRecognition) {
+        try { cmdRecognition.start(); } catch { /* ignore */ }
+      }
+    };
+
+    cmdRecognition.onerror = (event: any) => {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setVoiceActive(false);
+        recognitionRef.current = null;
+      }
+    };
+
+    recognitionRef.current = cmdRecognition;
+    try {
+      cmdRecognition.start();
+      setVoiceActive(true);
+    } catch {
+      setVoiceActive(false);
+      recognitionRef.current = null;
+    }
+  }, [voiceLang]);
+
   // Voice recognition for speed adaptation
   const startVoice = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -131,8 +180,23 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         const elapsedSeconds = (now - sessionStart) / 1000;
         if (elapsedSeconds > 1) {
           const wps = totalWords / elapsedSeconds;
-          const mappedSpeed = Math.round(Math.min(10, Math.max(1, wps * 2.5)));
+          const mappedSpeed = Math.round(Math.min(10, Math.max(1, wps * 2.5)) * 2) / 2;
           setSpeed(mappedSpeed);
+        }
+      }
+
+      // Also check for voice commands within pace mode
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          const transcript = event.results[i][0].transcript.trim().toLowerCase();
+          if (transcript.includes("restart") || transcript.includes("repornește") || transcript.includes("reset")) {
+            if (scrollRef.current) scrollRef.current.scrollTop = 0;
+            setPlaying(true);
+          } else if (transcript.includes("stop") || transcript.includes("oprește") || transcript.includes("pauză")) {
+            setPlaying(false);
+          } else if (transcript.includes("start") || transcript.includes("pornește") || transcript.includes("play")) {
+            setPlaying(true);
+          }
         }
       }
     };
@@ -238,11 +302,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           {/* Speed slider */}
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono text-muted-foreground w-14 shrink-0">{t("speed")}</span>
-            <button onClick={() => setSpeed((s) => Math.max(s - 1, 1))} className="p-1 text-foreground hover:text-primary">
+            <button onClick={() => setSpeed((s) => Math.max(s - 0.5, 1))} className="p-1 text-foreground hover:text-primary">
               <Minus className="w-4 h-4" />
             </button>
-            <Slider value={[speed]} onValueChange={([v]) => setSpeed(v)} min={1} max={10} step={1} className="flex-1" />
-            <button onClick={() => setSpeed((s) => Math.min(s + 1, 10))} className="p-1 text-foreground hover:text-primary">
+            <Slider value={[speed]} onValueChange={([v]) => setSpeed(v)} min={1} max={10} step={0.5} className="flex-1" />
+            <button onClick={() => setSpeed((s) => Math.min(s + 0.5, 10))} className="p-1 text-foreground hover:text-primary">
               <Plus className="w-4 h-4" />
             </button>
             <span className="text-xs font-mono text-foreground w-8 text-right">{speed}x</span>

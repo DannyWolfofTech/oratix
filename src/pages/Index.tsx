@@ -7,6 +7,7 @@ import ScriptList from "@/components/ScriptList";
 import ScriptEditor from "@/components/ScriptEditor";
 import TeleprompterView from "@/components/TeleprompterView";
 import { Button } from "@/components/ui/button";
+import AboutDialog from "@/components/AboutDialog";
 import { LogOut, Monitor, Menu, X, Globe } from "lucide-react";
 import { toast } from "sonner";
 
@@ -69,6 +70,7 @@ const Index = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <AboutDialog />
           <button
             onClick={() => setLang(lang === "ro" ? "en" : "ro")}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"

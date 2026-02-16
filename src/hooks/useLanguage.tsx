@@ -39,8 +39,10 @@ const translations = {
     voiceOn: "Voce ON",
     voicePace: "Ritm vocal",
     adaptingSpeed: "Se adaptează viteza la vocea ta…",
-    mobileHint: "Atinge pentru a arăta controalele · Ritm vocal pentru viteză automată",
-    desktopHint: "Spațiu redare/pauză · ↑↓ viteză · Scroll · Esc ieșire",
+    voiceCommands: "Comenzi vocale",
+    voiceCommandsHint: "Spune 'Start', 'Stop' sau 'Restart'",
+    mobileHint: "Atinge pentru a arăta controalele · Comenzi vocale: Start / Stop / Restart",
+    desktopHint: "Spațiu redare/pauză · ↑↓ viteză · Scroll · Esc ieșire · Vocal: Start/Stop/Restart",
 
     // General
     loading: "Se încarcă...",
@@ -78,8 +80,10 @@ const translations = {
     voiceOn: "Voice ON",
     voicePace: "Voice Pace",
     adaptingSpeed: "Adapting speed to your voice…",
-    mobileHint: "Tap to show controls · Voice Pace to auto-adjust speed",
-    desktopHint: "Space play/pause · ↑↓ speed · Scroll wheel · Esc exit",
+    voiceCommands: "Voice Commands",
+    voiceCommandsHint: "Say 'Start', 'Stop' or 'Restart'",
+    mobileHint: "Tap to show controls · Voice: Start / Stop / Restart",
+    desktopHint: "Space play/pause · ↑↓ speed · Scroll wheel · Esc exit · Voice: Start/Stop/Restart",
 
     loading: "Loading...",
     language: "Language",

@@ -28,19 +28,24 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
   const recognitionRef = useRef<any>(null);
+  const speedRef = useRef(speed);
+  const playingRef = useRef(playing);
 
-  // Smooth scrolling via requestAnimationFrame
-  const scroll = useCallback(() => {
-    if (scrollRef.current && playing) {
-      scrollRef.current.scrollTop += speed * 0.3;
-    }
-    animRef.current = requestAnimationFrame(scroll);
-  }, [playing, speed]);
+  // Keep refs in sync
+  useEffect(() => { speedRef.current = speed; }, [speed]);
+  useEffect(() => { playingRef.current = playing; }, [playing]);
 
+  // Smooth scrolling via requestAnimationFrame (uses refs to avoid stale closures)
   useEffect(() => {
+    const scroll = () => {
+      if (scrollRef.current && playingRef.current) {
+        scrollRef.current.scrollTop += speedRef.current * 0.3;
+      }
+      animRef.current = requestAnimationFrame(scroll);
+    };
     animRef.current = requestAnimationFrame(scroll);
     return () => cancelAnimationFrame(animRef.current);
-  }, [scroll]);
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -188,12 +193,12 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       onMouseMove={handleInteraction}
       onTouchStart={handleInteraction}
     >
-      {/* Controls overlay */}
+      {/* Controls overlay - scrollable on mobile to access all controls */}
       <div
-        className={`absolute top-0 left-0 right-0 z-10 p-3 sm:p-4 transition-opacity duration-500 ${
+        className={`absolute top-0 left-0 right-0 z-10 p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.9), transparent)" }}
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.95) 80%, transparent)" }}
       >
         <div className="flex flex-col gap-3 max-w-3xl mx-auto">
           {/* Top row */}
@@ -244,8 +249,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             <span className="text-xs font-mono text-foreground w-8 text-right">{fontSize}px</span>
           </div>
 
-          {/* Voice control */}
-          <div className="flex items-center gap-2">
+          {/* Voice control - visible on all devices */}
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={voiceActive ? stopVoice : startVoice}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${

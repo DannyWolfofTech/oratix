@@ -3,6 +3,7 @@ import { Script } from "@/hooks/useScripts";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save, Play } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface ScriptEditorProps {
   script: Script | null;
@@ -12,6 +13,7 @@ interface ScriptEditorProps {
 }
 
 const ScriptEditor = ({ script, onSave, onPlay, isSaving }: ScriptEditorProps) => {
+  const { t } = useLanguage();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
@@ -24,8 +26,8 @@ const ScriptEditor = ({ script, onSave, onPlay, isSaving }: ScriptEditorProps) =
 
   if (!script) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground">
-        <p>Select or create a script to begin editing.</p>
+      <div className="flex-1 flex items-center justify-center text-muted-foreground px-6">
+        <p className="text-center">{t("selectOrCreate")}</p>
       </div>
     );
   }
@@ -38,8 +40,8 @@ const ScriptEditor = ({ script, onSave, onPlay, isSaving }: ScriptEditorProps) =
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Script title..."
-          className="bg-transparent border-none text-lg font-semibold font-mono p-0 h-auto focus-visible:ring-0"
+          placeholder={t("scriptTitle")}
+          className="bg-transparent border-none text-lg font-semibold p-0 h-auto focus-visible:ring-0"
         />
         <div className="flex gap-2 shrink-0">
           <Button
@@ -47,21 +49,22 @@ const ScriptEditor = ({ script, onSave, onPlay, isSaving }: ScriptEditorProps) =
             variant="outline"
             onClick={() => onSave(title, content)}
             disabled={!hasChanges || isSaving}
+            className="h-9"
           >
-            <Save className="w-4 h-4 mr-1" />
-            Save
+            <Save className="w-4 h-4 mr-1.5" />
+            {t("save")}
           </Button>
-          <Button size="sm" onClick={onPlay} disabled={!content.trim()}>
-            <Play className="w-4 h-4 mr-1" />
-            Play
+          <Button size="sm" onClick={onPlay} disabled={!content.trim()} className="h-9">
+            <Play className="w-4 h-4 mr-1.5" />
+            {t("play")}
           </Button>
         </div>
       </div>
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="Paste or type your script here..."
-        className="flex-1 w-full bg-transparent p-4 text-foreground resize-none focus:outline-none font-mono text-sm leading-relaxed placeholder:text-muted-foreground"
+        placeholder={t("pasteOrType")}
+        className="flex-1 w-full bg-transparent p-4 sm:p-6 text-foreground resize-none focus:outline-none text-sm leading-relaxed placeholder:text-muted-foreground"
       />
     </div>
   );

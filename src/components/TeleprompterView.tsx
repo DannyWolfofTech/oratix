@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Minus, Plus, FlipHorizontal2, Pause, Play, Mic, MicOff } from "lucide-react";
+import { X, Minus, Plus, FlipHorizontal2, Pause, Play, Mic, MicOff, Video, VideoOff } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
+import { toast } from "sonner";
 
 interface TeleprompterViewProps {
   content: string;
@@ -24,12 +25,17 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [showControls, setShowControls] = useState(true);
   const [voiceActive, setVoiceActive] = useState(false);
   const [voiceLang, setVoiceLang] = useState<"en-US" | "ro-RO">(lang === "ro" ? "ro-RO" : "en-US");
+  const [isRecording, setIsRecording] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
   const recognitionRef = useRef<any>(null);
   const speedRef = useRef(speed);
   const playingRef = useRef(playing);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   // Keep refs in sync
   useEffect(() => { speedRef.current = speed; }, [speed]);
@@ -259,6 +265,85 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     prevLangRef.current = voiceLang;
   }, [voiceLang, voiceActive, startVoice]);
 
+  // Camera recording
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true,
+      });
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+        ? "video/webm;codecs=vp9,opus"
+        : MediaRecorder.isTypeSupported("video/webm")
+        ? "video/webm"
+        : "video/mp4";
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+        a.download = `teleprompt-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success(t("recordingSaved"));
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start(1000);
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Camera error:", err);
+      toast.error(t("cameraNotAvailable"));
+    }
+  }, [t]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      setCameraStream(null);
+    }
+    setIsRecording(false);
+    mediaRecorderRef.current = null;
+  }, [cameraStream]);
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [cameraStream]);
+
+  // Keep video element in sync with stream
+  useEffect(() => {
+    if (videoRef.current && cameraStream) {
+      videoRef.current.srcObject = cameraStream;
+    }
+  }, [cameraStream]);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-teleprompter-bg flex flex-col"
@@ -321,7 +406,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             <span className="text-xs font-mono text-foreground w-8 text-right">{fontSize}px</span>
           </div>
 
-          {/* Voice control - visible on all devices */}
+          {/* Voice & Recording controls */}
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={voiceActive ? stopVoice : startVoice}
@@ -339,6 +424,17 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               className="px-3 py-1.5 rounded-lg bg-secondary/80 text-foreground text-xs font-medium hover:text-primary transition-colors"
             >
               {voiceLang === "en-US" ? "🇬🇧 EN" : "🇷🇴 RO"}
+            </button>
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                isRecording
+                  ? "bg-destructive text-destructive-foreground animate-pulse"
+                  : "bg-secondary/80 text-foreground hover:text-primary"
+              }`}
+            >
+              {isRecording ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+              {isRecording ? t("stopRecording") : t("record")}
             </button>
             {voiceActive && (
               <span className="text-xs text-muted-foreground">{t("adaptingSpeed")}</span>
@@ -358,6 +454,22 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           </p>
         </div>
       </div>
+
+      {/* Camera preview PiP */}
+      {cameraStream && (
+        <div className="absolute bottom-14 right-4 z-20 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-28 h-20 sm:w-40 sm:h-28 object-cover mirror-text"
+          />
+          {isRecording && (
+            <div className="absolute top-1.5 left-1.5 w-2.5 h-2.5 rounded-full bg-destructive animate-pulse" />
+          )}
+        </div>
+      )}
 
       {/* Bottom hint */}
       <div className={`absolute bottom-0 left-0 right-0 z-10 p-3 text-center transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>

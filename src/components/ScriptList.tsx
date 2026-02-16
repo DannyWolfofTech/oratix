@@ -2,6 +2,8 @@ import { Script } from "@/hooks/useScripts";
 import { FileText, Trash2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
+import { ro, enUS } from "date-fns/locale";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface ScriptListProps {
   scripts: Script[];
@@ -12,16 +14,19 @@ interface ScriptListProps {
 }
 
 const ScriptList = ({ scripts, activeId, onSelect, onDelete, onCreate }: ScriptListProps) => {
+  const { t, lang } = useLanguage();
+  const dateLocale = lang === "ro" ? ro : enUS;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Scripts</h2>
-        <Button size="sm" variant="outline" onClick={onCreate} className="text-xs">
-          + New
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">{t("scripts")}</h2>
+        <Button size="sm" variant="outline" onClick={onCreate} className="text-xs h-8">
+          {t("newScript")}
         </Button>
       </div>
       {scripts.length === 0 && (
-        <p className="text-muted-foreground text-sm text-center py-8">No scripts yet. Create one to get started.</p>
+        <p className="text-muted-foreground text-sm text-center py-8">{t("noScripts")}</p>
       )}
       {scripts.map((script) => (
         <button
@@ -30,17 +35,17 @@ const ScriptList = ({ scripts, activeId, onSelect, onDelete, onCreate }: ScriptL
           className={`w-full text-left p-3 rounded-lg border transition-all group ${
             activeId === script.id
               ? "bg-primary/10 border-primary/30"
-              : "bg-secondary/50 border-border hover:border-primary/20"
+              : "bg-secondary/30 border-border hover:border-primary/20 hover:bg-secondary/50"
           }`}
         >
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-start gap-2 min-w-0">
+            <div className="flex items-start gap-2.5 min-w-0">
               <FileText className="w-4 h-4 text-primary mt-0.5 shrink-0" />
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{script.title || "Untitled"}</p>
+                <p className="text-sm font-medium truncate">{script.title || t("untitledScript")}</p>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                   <Clock className="w-3 h-3" />
-                  <span>{formatDistanceToNow(new Date(script.updated_at), { addSuffix: true })}</span>
+                  <span>{formatDistanceToNow(new Date(script.updated_at), { addSuffix: true, locale: dateLocale })}</span>
                 </div>
               </div>
             </div>

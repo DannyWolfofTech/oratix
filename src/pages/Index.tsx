@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScripts, Script } from "@/hooks/useScripts";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Navigate } from "react-router-dom";
 import ScriptList from "@/components/ScriptList";
 import ScriptEditor from "@/components/ScriptEditor";
 import TeleprompterView from "@/components/TeleprompterView";
 import { Button } from "@/components/ui/button";
-import { LogOut, Monitor, Menu, X } from "lucide-react";
+import { LogOut, Monitor, Menu, X, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
   const { user, loading, signOut } = useAuth();
   const { scripts, isLoading, createScript, updateScript, deleteScript } = useScripts();
+  const { t, lang, setLang } = useLanguage();
   const [activeScript, setActiveScript] = useState<Script | null>(null);
   const [playingContent, setPlayingContent] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -20,7 +22,7 @@ const Index = () => {
   if (!user) return <Navigate to="/auth" replace />;
 
   const handleCreate = async () => {
-    const result = await createScript.mutateAsync({ title: "Untitled Script", content: "" });
+    const result = await createScript.mutateAsync({ title: t("untitledScript"), content: "" });
     setActiveScript(result);
     setSidebarOpen(false);
   };
@@ -29,13 +31,13 @@ const Index = () => {
     if (!activeScript) return;
     const result = await updateScript.mutateAsync({ id: activeScript.id, title, content });
     setActiveScript(result);
-    toast.success("Script saved");
+    toast.success(t("scriptSaved"));
   };
 
   const handleDelete = async (id: string) => {
     await deleteScript.mutateAsync(id);
     if (activeScript?.id === id) setActiveScript(null);
-    toast.success("Script deleted");
+    toast.success(t("scriptDeleted"));
   };
 
   const handleSelect = (script: Script) => {
@@ -56,18 +58,29 @@ const Index = () => {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-1 text-muted-foreground hover:text-foreground">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-1.5 text-muted-foreground hover:text-foreground transition-colors">
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-          <div className="flex items-center gap-2">
-            <Monitor className="w-5 h-5 text-primary" />
-            <h1 className="text-lg font-bold font-mono tracking-tight">TelePrompt</h1>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Monitor className="w-4 h-4 text-primary" />
+            </div>
+            <h1 className="text-lg font-bold tracking-tight">{t("appName")}</h1>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground hover:text-foreground">
-          <LogOut className="w-4 h-4 mr-1" />
-          <span className="hidden sm:inline">Sign Out</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLang(lang === "ro" ? "en" : "ro")}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            {lang === "ro" ? "EN" : "RO"}
+          </button>
+          <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground hover:text-foreground">
+            <LogOut className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">{t("signOut")}</span>
+          </Button>
+        </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
@@ -76,13 +89,13 @@ const Index = () => {
           className={`
             ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
             lg:translate-x-0 fixed lg:relative z-20 lg:z-auto
-            w-72 h-[calc(100vh-53px)] bg-background lg:bg-card/50
+            w-72 h-[calc(100vh-53px)] bg-background lg:bg-card/30
             border-r border-border p-4 overflow-y-auto
             transition-transform duration-200 ease-in-out
           `}
         >
           {isLoading ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t("loading")}</p>
           ) : (
             <ScriptList
               scripts={scripts}
@@ -96,7 +109,7 @@ const Index = () => {
 
         {/* Backdrop for mobile sidebar */}
         {sidebarOpen && (
-          <div className="fixed inset-0 bg-background/80 z-10 lg:hidden" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-10 lg:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
         {/* Editor */}

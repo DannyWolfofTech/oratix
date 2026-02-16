@@ -76,7 +76,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   }, []);
 
   // Auto-hide controls
-  const handleInteraction = () => {
+  const handleMouseMove = () => {
+    if (isMobile) return; // On mobile, only tap toggles
     setShowControls(true);
     clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = setTimeout(() => {
@@ -84,14 +85,21 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     }, 3000);
   };
 
+  const handleTap = () => {
+    if (!isMobile) return;
+    setShowControls((prev) => !prev);
+  };
+
   useEffect(() => {
     if (playing) {
-      controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
+      // On mobile, hide immediately; on desktop, delay
+      const delay = isMobile ? 0 : 3000;
+      controlsTimeoutRef.current = setTimeout(() => setShowControls(false), delay);
     } else {
       setShowControls(true);
     }
     return () => clearTimeout(controlsTimeoutRef.current);
-  }, [playing]);
+  }, [playing, isMobile]);
 
   // Voice recognition for speed adaptation
   const startVoice = useCallback(() => {
@@ -190,8 +198,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   return (
     <div
       className="fixed inset-0 z-50 bg-teleprompter-bg flex flex-col"
-      onMouseMove={handleInteraction}
-      onTouchStart={handleInteraction}
+      onMouseMove={handleMouseMove}
+      onClick={handleTap}
     >
       {/* Controls overlay - scrollable on mobile to access all controls */}
       <div
@@ -278,7 +286,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {/* Scrolling text */}
       <div ref={scrollRef} className="flex-1 overflow-hidden fade-mask">
         <div
-          className={`max-w-4xl mx-auto px-4 sm:px-8 py-[50vh] ${mirrored ? "mirror-text" : ""}`}
+          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[70vh] sm:pt-[50vh] pb-[50vh] ${mirrored ? "mirror-text" : ""}`}
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p className="text-teleprompter-text font-sans font-medium whitespace-pre-wrap">

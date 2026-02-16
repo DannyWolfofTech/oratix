@@ -1,21 +1,35 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Minus, Plus, FlipHorizontal2, Pause, Play } from "lucide-react";
+import { X, Minus, Plus, FlipHorizontal2, Pause, Play, Mic, MicOff } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Slider } from "@/components/ui/slider";
 
 interface TeleprompterViewProps {
   content: string;
   onClose: () => void;
 }
 
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: SpeechRecognitionResultList;
+}
+
 const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
+  const isMobile = useIsMobile();
   const [speed, setSpeed] = useState(3);
-  const [fontSize, setFontSize] = useState(42);
+  const [fontSize, setFontSize] = useState(() => (window.innerWidth < 768 ? 28 : 42));
   const [mirrored, setMirrored] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [voiceLang, setVoiceLang] = useState<"en-US" | "ro-RO">("en-US");
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const recognitionRef = useRef<any>(null);
+  const lastWordTimeRef = useRef<number>(Date.now());
+  const wordsPerSecondRef = useRef<number>(2);
 
+  // Smooth scrolling via requestAnimationFrame
   const scroll = useCallback(() => {
     if (scrollRef.current && playing) {
       scrollRef.current.scrollTop += speed * 0.5;
@@ -28,6 +42,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     return () => cancelAnimationFrame(animRef.current);
   }, [scroll]);
 
+  // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -39,6 +54,23 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // Mouse wheel speed control (desktop)
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        setSpeed((s) => Math.min(s + 1, 10));
+      } else {
+        setSpeed((s) => Math.max(s - 1, 1));
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Auto-hide controls
   const handleInteraction = () => {
     setShowControls(true);
     clearTimeout(controlsTimeoutRef.current);
@@ -56,6 +88,106 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     return () => clearTimeout(controlsTimeoutRef.current);
   }, [playing]);
 
+  // Voice recognition for speed adaptation
+  const startVoice = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = voiceLang;
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const now = Date.now();
+      const elapsed = (now - lastWordTimeRef.current) / 1000;
+      lastWordTimeRef.current = now;
+
+      // Count words in latest result
+      const latest = event.results[event.results.length - 1];
+      const words = latest[0].transcript.trim().split(/\s+/).length;
+
+      if (elapsed > 0 && elapsed < 5) {
+        const wps = words / elapsed;
+        wordsPerSecondRef.current = wordsPerSecondRef.current * 0.7 + wps * 0.3;
+        // Map words per second (1-5) to speed (1-10)
+        const mappedSpeed = Math.round(Math.min(10, Math.max(1, wordsPerSecondRef.current * 2)));
+        setSpeed(mappedSpeed);
+      }
+    };
+
+    recognition.onerror = () => {
+      setVoiceActive(false);
+    };
+
+    recognition.onend = () => {
+      // Restart if still active
+      if (recognitionRef.current) {
+        try { recognition.start(); } catch { setVoiceActive(false); }
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setVoiceActive(true);
+    lastWordTimeRef.current = Date.now();
+  }, [voiceLang]);
+
+  const stopVoice = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null;
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setVoiceActive(false);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { stopVoice(); };
+  }, [stopVoice]);
+
+  // Toggle voice language
+  const toggleLang = () => {
+    const newLang = voiceLang === "en-US" ? "ro-RO" : "en-US";
+    setVoiceLang(newLang);
+    if (voiceActive) {
+      stopVoice();
+      // Restart with new lang after a tick
+      setTimeout(() => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) return;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = newLang;
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
+          const now = Date.now();
+          const elapsed = (now - lastWordTimeRef.current) / 1000;
+          lastWordTimeRef.current = now;
+          const latest = event.results[event.results.length - 1];
+          const words = latest[0].transcript.trim().split(/\s+/).length;
+          if (elapsed > 0 && elapsed < 5) {
+            const wps = words / elapsed;
+            wordsPerSecondRef.current = wordsPerSecondRef.current * 0.7 + wps * 0.3;
+            const mappedSpeed = Math.round(Math.min(10, Math.max(1, wordsPerSecondRef.current * 2)));
+            setSpeed(mappedSpeed);
+          }
+        };
+        recognition.onerror = () => setVoiceActive(false);
+        recognition.onend = () => {
+          if (recognitionRef.current) {
+            try { recognition.start(); } catch { setVoiceActive(false); }
+          }
+        };
+        recognitionRef.current = recognition;
+        recognition.start();
+        setVoiceActive(true);
+        lastWordTimeRef.current = Date.now();
+      }, 100);
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 bg-teleprompter-bg flex flex-col"
@@ -64,59 +196,103 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     >
       {/* Controls overlay */}
       <div
-        className={`absolute top-0 left-0 right-0 z-10 p-4 transition-opacity duration-500 ${
+        className={`absolute top-0 left-0 right-0 z-10 p-3 sm:p-4 transition-opacity duration-500 ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
-        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)" }}
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.85), transparent)" }}
       >
-        <div className="flex items-center justify-between max-w-3xl mx-auto">
-          <div className="flex items-center gap-3">
-            {/* Speed */}
-            <div className="flex items-center gap-1 bg-secondary/80 rounded-lg px-2 py-1">
-              <button onClick={() => setSpeed((s) => Math.max(s - 1, 1))} className="p-1 text-foreground hover:text-primary">
-                <Minus className="w-4 h-4" />
+        <div className="flex flex-col gap-3 max-w-3xl mx-auto">
+          {/* Top row: play/close */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPlaying(!playing)}
+                className="p-2.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition"
+              >
+                {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </button>
-              <span className="text-xs font-mono text-foreground min-w-[3ch] text-center">{speed}x</span>
-              <button onClick={() => setSpeed((s) => Math.min(s + 1, 10))} className="p-1 text-foreground hover:text-primary">
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Font size */}
-            <div className="flex items-center gap-1 bg-secondary/80 rounded-lg px-2 py-1">
-              <button onClick={() => setFontSize((s) => Math.max(s - 4, 16))} className="p-1 text-foreground hover:text-primary text-xs font-mono">
-                A
-              </button>
-              <span className="text-xs font-mono text-foreground min-w-[3ch] text-center">{fontSize}</span>
-              <button onClick={() => setFontSize((s) => Math.min(s + 4, 80))} className="p-1 text-foreground hover:text-primary text-base font-mono font-bold">
-                A
+              {/* Mirror */}
+              <button
+                onClick={() => setMirrored(!mirrored)}
+                className={`p-2.5 rounded-lg transition-colors ${
+                  mirrored ? "bg-primary text-primary-foreground" : "bg-secondary/80 text-foreground hover:text-primary"
+                }`}
+              >
+                <FlipHorizontal2 className="w-5 h-5" />
               </button>
             </div>
-
-            {/* Mirror */}
             <button
-              onClick={() => setMirrored(!mirrored)}
-              className={`p-2 rounded-lg transition-colors ${
-                mirrored ? "bg-primary text-primary-foreground" : "bg-secondary/80 text-foreground hover:text-primary"
-              }`}
+              onClick={onClose}
+              className="p-2.5 rounded-lg bg-secondary/80 text-foreground hover:text-destructive transition"
             >
-              <FlipHorizontal2 className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
+          {/* Speed slider */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono text-muted-foreground w-12 shrink-0">Speed</span>
+            <button onClick={() => setSpeed((s) => Math.max(s - 1, 1))} className="p-1 text-foreground hover:text-primary">
+              <Minus className="w-4 h-4" />
+            </button>
+            <Slider
+              value={[speed]}
+              onValueChange={([v]) => setSpeed(v)}
+              min={1}
+              max={10}
+              step={1}
+              className="flex-1"
+            />
+            <button onClick={() => setSpeed((s) => Math.min(s + 1, 10))} className="p-1 text-foreground hover:text-primary">
+              <Plus className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-mono text-foreground w-8 text-right">{speed}x</span>
+          </div>
+
+          {/* Font size slider */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono text-muted-foreground w-12 shrink-0">Size</span>
+            <button onClick={() => setFontSize((s) => Math.max(s - 4, 16))} className="p-1 text-foreground hover:text-primary text-xs font-mono">
+              A
+            </button>
+            <Slider
+              value={[fontSize]}
+              onValueChange={([v]) => setFontSize(v)}
+              min={16}
+              max={80}
+              step={2}
+              className="flex-1"
+            />
+            <button onClick={() => setFontSize((s) => Math.min(s + 4, 80))} className="p-1 text-foreground hover:text-primary text-base font-mono font-bold">
+              A
+            </button>
+            <span className="text-xs font-mono text-foreground w-8 text-right">{fontSize}px</span>
+          </div>
+
+          {/* Voice control row */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setPlaying(!playing)}
-              className="p-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition"
+              onClick={voiceActive ? stopVoice : startVoice}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors ${
+                voiceActive
+                  ? "bg-primary text-primary-foreground animate-pulse"
+                  : "bg-secondary/80 text-foreground hover:text-primary"
+              }`}
             >
-              {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              {voiceActive ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+              {voiceActive ? "Voice ON" : "Voice Pace"}
             </button>
             <button
-              onClick={onClose}
-              className="p-2 rounded-lg bg-secondary/80 text-foreground hover:text-destructive transition"
+              onClick={toggleLang}
+              className="px-3 py-1.5 rounded-lg bg-secondary/80 text-foreground text-xs font-mono hover:text-primary transition-colors"
             >
-              <X className="w-4 h-4" />
+              {voiceLang === "en-US" ? "🇬🇧 EN" : "🇷🇴 RO"}
             </button>
+            {voiceActive && (
+              <span className="text-xs text-muted-foreground font-mono">
+                Adapting speed to your voice…
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -124,7 +300,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {/* Scrolling text */}
       <div ref={scrollRef} className="flex-1 overflow-hidden fade-mask">
         <div
-          className={`max-w-4xl mx-auto px-8 py-[50vh] ${mirrored ? "mirror-text" : ""}`}
+          className={`max-w-4xl mx-auto px-4 sm:px-8 py-[50vh] ${mirrored ? "mirror-text" : ""}`}
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p className="text-teleprompter-text font-sans font-medium whitespace-pre-wrap">
@@ -140,7 +316,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         }`}
       >
         <p className="text-xs text-muted-foreground font-mono">
-          Space to play/pause · ↑↓ speed · Esc to exit
+          {isMobile
+            ? "Tap to show controls · Voice Pace to auto-adjust speed"
+            : "Space play/pause · ↑↓ speed · Scroll wheel · Esc exit"
+          }
         </p>
       </div>
     </div>

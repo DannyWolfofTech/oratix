@@ -21,7 +21,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [playing, setPlaying] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [voiceActive, setVoiceActive] = useState(false);
-  const [voiceLang, setVoiceLang] = useState<"en-US" | "ro-RO">("en-US");
+  const [voiceLang, setVoiceLang] = useState<"en-US" | "ro-RO">("ro-RO");
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();

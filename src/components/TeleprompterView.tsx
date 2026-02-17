@@ -259,12 +259,16 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     prevLangRef.current = voiceLang;
   }, [voiceLang, voiceActive, startVoice]);
 
-  // Camera recording - fixed file integrity
+  // Camera recording - rewritten for file integrity
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100,
+        },
       });
       setCameraStream(stream);
       if (videoRef.current) {
@@ -281,27 +285,39 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
       if (!mimeType) {
         toast.error(t("recordingError"));
+        stream.getTracks().forEach((track) => track.stop());
+        setCameraStream(null);
         return;
       }
 
-      const recorder = new MediaRecorder(stream, { mimeType });
       chunksRef.current = [];
+      const recorder = new MediaRecorder(stream, { mimeType });
 
       recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
       };
 
+      // CRITICAL: Download ONLY happens here, after stop is fully complete
       recorder.onstop = () => {
-        // Wait a tick to ensure all chunks are collected
+        toast.info(t("saving") || "Saving...");
         setTimeout(() => {
           const blob = new Blob(chunksRef.current, { type: mimeType });
           chunksRef.current = [];
+
+          // Stop and release camera tracks AFTER blob is created
+          stream.getTracks().forEach((track) => track.stop());
+          setCameraStream(null);
+
           if (blob.size === 0) {
             toast.error(t("recordingError"));
             return;
           }
+
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
+          a.style.display = "none";
           a.href = url;
           const ext = mimeType.includes("mp4") ? "mp4" : "webm";
           a.download = `teleprompt-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.${ext}`;
@@ -310,29 +326,33 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
           toast.success(t("recordingSaved"));
-        }, 100);
+        }, 200);
       };
 
       mediaRecorderRef.current = recorder;
-      recorder.start(1000);
+      // Start with timeslice to ensure regular data chunks
+      recorder.start(500);
       setIsRecording(true);
     } catch (err) {
       console.error("Camera error:", err);
-      toast.error(t("cameraNotAvailable"));
+      if (err instanceof Error && err.name === "NotAllowedError") {
+        toast.error(t("cameraNotAvailable"));
+      } else {
+        toast.error(t("recordingError"));
+      }
+      setIsRecording(false);
     }
   }, [t]);
 
+  // Stop: ONLY call recorder.stop(). Do NOT touch stream/camera here.
+  // The onstop handler above handles cleanup + download.
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((track) => track.stop());
-      setCameraStream(null);
-    }
     setIsRecording(false);
     mediaRecorderRef.current = null;
-  }, [cameraStream]);
+  }, []);
 
   // "Start Recording & Scroll" combo
   const startRecordAndScroll = useCallback(async () => {
@@ -340,25 +360,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setPlaying(true);
   }, [startRecording]);
 
-  // Cleanup camera on unmount
+  // Cleanup camera on unmount only
   useEffect(() => {
     return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-      if (cameraStream) {
-        cameraStream.getTracks().forEach((track) => track.stop());
+        try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
       }
     };
-  }, [cameraStream]);
-
-  // Keep video element in sync with stream
-  useEffect(() => {
-    if (videoRef.current && cameraStream) {
-      videoRef.current.srcObject = cameraStream;
-    }
-  }, [cameraStream]);
-
+  }, []);
   return (
     <div
       className="fixed inset-0 z-50 bg-teleprompter-bg flex flex-col"
@@ -473,18 +482,21 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </div>
       </div>
 
-      {/* Camera preview - top-right, pointer-events-none so it doesn't block text interaction */}
+      {/* Camera preview - fixed size, top-right, pointer-events-none */}
       {cameraStream && (
-        <div className="absolute top-3 right-3 z-20 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg pointer-events-none">
+        <div
+          className="fixed top-3 right-3 z-20 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg pointer-events-none"
+          style={{ width: 120, height: 160 }}
+        >
           <video
             ref={videoRef}
             autoPlay
             muted
             playsInline
-            className="w-24 h-16 sm:w-36 sm:h-24 object-cover mirror-text"
+            className="w-full h-full object-cover mirror-text"
           />
           {isRecording && (
-            <div className="absolute top-1.5 left-1.5 w-2.5 h-2.5 rounded-full bg-destructive animate-pulse" />
+            <div className="absolute top-1.5 left-1.5 w-3 h-3 rounded-full bg-destructive animate-pulse border border-destructive-foreground" />
           )}
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Minus, Plus, FlipHorizontal2, Pause, Play, Mic, MicOff, Video, VideoOff } from "lucide-react";
+import { X, Minus, Plus, FlipHorizontal2, Pause, Play, Mic, MicOff, Video, VideoOff, ArrowUp } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
@@ -27,6 +27,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [voiceLang, setVoiceLang] = useState<"en-US" | "ro-RO">(lang === "ro" ? "ro-RO" : "en-US");
   const [isRecording, setIsRecording] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -41,7 +42,38 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { playingRef.current = playing; }, [playing]);
 
-  // Smooth scrolling via requestAnimationFrame (uses refs to avoid stale closures)
+  // Show Back to Top when paused and not at top
+  useEffect(() => {
+    if (!playing && scrollRef.current && scrollRef.current.scrollTop > 100) {
+      setShowBackToTop(true);
+    } else if (playing) {
+      setShowBackToTop(false);
+    }
+  }, [playing]);
+
+  // Detect scroll reaching the end
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
+      if (atBottom && playing) {
+        setPlaying(false);
+        setShowBackToTop(true);
+      }
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [playing]);
+
+  const scrollToTop = useCallback(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+    setShowBackToTop(false);
+  }, []);
+
+  // Smooth scrolling via requestAnimationFrame
   useEffect(() => {
     const scroll = () => {
       if (scrollRef.current && playingRef.current) {
@@ -65,7 +97,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Mouse wheel speed control (desktop)
+  // Mouse wheel speed control
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -83,7 +115,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   // Auto-hide controls
   const handleMouseMove = () => {
-    if (isMobile) return; // On mobile, only tap toggles
+    if (isMobile) return;
     setShowControls(true);
     clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = setTimeout(() => {
@@ -98,7 +130,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   useEffect(() => {
     if (playing) {
-      // On mobile, hide immediately; on desktop, delay
       const delay = isMobile ? 0 : 3000;
       controlsTimeoutRef.current = setTimeout(() => setShowControls(false), delay);
     } else {
@@ -107,16 +138,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     return () => clearTimeout(controlsTimeoutRef.current);
   }, [playing, isMobile]);
 
-  // Voice commands recognition (Start/Stop/Restart)
+  // Voice commands recognition
   const startVoiceCommands = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
-
     const cmdRecognition = new SpeechRecognition();
     cmdRecognition.continuous = true;
     cmdRecognition.interimResults = false;
     cmdRecognition.lang = voiceLang;
-
     cmdRecognition.onresult = (event: SpeechRecognitionEvent) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
@@ -132,46 +161,31 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         }
       }
     };
-
     cmdRecognition.onend = () => {
       if (recognitionRef.current === cmdRecognition) {
         try { cmdRecognition.start(); } catch { /* ignore */ }
       }
     };
-
     cmdRecognition.onerror = (event: any) => {
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         setVoiceActive(false);
         recognitionRef.current = null;
       }
     };
-
     recognitionRef.current = cmdRecognition;
-    try {
-      cmdRecognition.start();
-      setVoiceActive(true);
-    } catch {
-      setVoiceActive(false);
-      recognitionRef.current = null;
-    }
+    try { cmdRecognition.start(); setVoiceActive(true); } catch { setVoiceActive(false); recognitionRef.current = null; }
   }, [voiceLang]);
 
   // Voice recognition for speed adaptation
   const startVoice = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.error("Speech recognition not supported");
-      return;
-    }
-
+    if (!SpeechRecognition) return;
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = voiceLang;
-
     let totalWords = 0;
     let sessionStart = Date.now();
-
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const now = Date.now();
       let finalWordCount = 0;
@@ -180,7 +194,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           finalWordCount += event.results[i][0].transcript.trim().split(/\s+/).length;
         }
       }
-
       if (finalWordCount > totalWords) {
         totalWords = finalWordCount;
         const elapsedSeconds = (now - sessionStart) / 1000;
@@ -190,8 +203,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           setSpeed(mappedSpeed);
         }
       }
-
-      // Also check for voice commands within pace mode
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const transcript = event.results[i][0].transcript.trim().toLowerCase();
@@ -206,32 +217,19 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         }
       }
     };
-
     recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         setVoiceActive(false);
         recognitionRef.current = null;
       }
     };
-
     recognition.onend = () => {
       if (recognitionRef.current === recognition) {
-        try { recognition.start(); } catch {
-          setVoiceActive(false);
-          recognitionRef.current = null;
-        }
+        try { recognition.start(); } catch { setVoiceActive(false); recognitionRef.current = null; }
       }
     };
-
     recognitionRef.current = recognition;
-    try {
-      recognition.start();
-      setVoiceActive(true);
-    } catch {
-      setVoiceActive(false);
-      recognitionRef.current = null;
-    }
+    try { recognition.start(); setVoiceActive(true); } catch { setVoiceActive(false); recognitionRef.current = null; }
   }, [voiceLang]);
 
   const stopVoice = useCallback(() => {
@@ -243,16 +241,12 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setVoiceActive(false);
   }, []);
 
-  useEffect(() => {
-    return () => { stopVoice(); };
-  }, [stopVoice]);
+  useEffect(() => { return () => { stopVoice(); }; }, [stopVoice]);
 
   const toggleLang = () => {
     const newLang = voiceLang === "en-US" ? "ro-RO" : "en-US";
     setVoiceLang(newLang);
-    if (voiceActive) {
-      stopVoice();
-    }
+    if (voiceActive) stopVoice();
   };
 
   const prevLangRef = useRef(voiceLang);
@@ -265,7 +259,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     prevLangRef.current = voiceLang;
   }, [voiceLang, voiceActive, startVoice]);
 
-  // Camera recording
+  // Camera recording - fixed file integrity
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -277,31 +271,46 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         videoRef.current.srcObject = stream;
       }
 
-      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+      const mimeType = MediaRecorder.isTypeSupported("video/mp4")
+        ? "video/mp4"
+        : MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
         ? "video/webm;codecs=vp9,opus"
         : MediaRecorder.isTypeSupported("video/webm")
         ? "video/webm"
-        : "video/mp4";
+        : "";
+
+      if (!mimeType) {
+        toast.error(t("recordingError"));
+        return;
+      }
 
       const recorder = new MediaRecorder(stream, { mimeType });
       chunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-        a.download = `teleprompt-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.${ext}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        toast.success(t("recordingSaved"));
+        // Wait a tick to ensure all chunks are collected
+        setTimeout(() => {
+          const blob = new Blob(chunksRef.current, { type: mimeType });
+          chunksRef.current = [];
+          if (blob.size === 0) {
+            toast.error(t("recordingError"));
+            return;
+          }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+          a.download = `teleprompt-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.${ext}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast.success(t("recordingSaved"));
+        }, 100);
       };
 
       mediaRecorderRef.current = recorder;
@@ -324,6 +333,12 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setIsRecording(false);
     mediaRecorderRef.current = null;
   }, [cameraStream]);
+
+  // "Start Recording & Scroll" combo
+  const startRecordAndScroll = useCallback(async () => {
+    await startRecording();
+    setPlaying(true);
+  }, [startRecording]);
 
   // Cleanup camera on unmount
   useEffect(() => {
@@ -350,9 +365,9 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       onMouseMove={handleMouseMove}
       onClick={handleTap}
     >
-      {/* Controls overlay - scrollable on mobile to access all controls */}
+      {/* Controls overlay */}
       <div
-        className={`absolute top-0 left-0 right-0 z-10 p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto ${
+        className={`absolute top-0 left-0 right-0 z-30 p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.95) 80%, transparent)" }}
@@ -425,17 +440,32 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             >
               {voiceLang === "en-US" ? "🇬🇧 EN" : "🇷🇴 RO"}
             </button>
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                isRecording
-                  ? "bg-destructive text-destructive-foreground animate-pulse"
-                  : "bg-secondary/80 text-foreground hover:text-primary"
-              }`}
-            >
-              {isRecording ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
-              {isRecording ? t("stopRecording") : t("record")}
-            </button>
+            {!isRecording ? (
+              <>
+                <button
+                  onClick={startRecording}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary/80 text-foreground hover:text-primary transition-colors"
+                >
+                  <Video className="w-4 h-4" />
+                  {t("record")}
+                </button>
+                <button
+                  onClick={startRecordAndScroll}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-colors"
+                >
+                  <Video className="w-4 h-4" />
+                  {t("startRecordAndScroll")}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={stopRecording}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive text-destructive-foreground animate-pulse transition-colors"
+              >
+                <VideoOff className="w-4 h-4" />
+                {t("stopRecording")}
+              </button>
+            )}
             {voiceActive && (
               <span className="text-xs text-muted-foreground">{t("adaptingSpeed")}</span>
             )}
@@ -443,8 +473,24 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </div>
       </div>
 
-      {/* Scrolling text */}
-      <div ref={scrollRef} className="flex-1 overflow-hidden fade-mask">
+      {/* Camera preview - top-right, pointer-events-none so it doesn't block text interaction */}
+      {cameraStream && (
+        <div className="absolute top-3 right-3 z-20 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg pointer-events-none">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-24 h-16 sm:w-36 sm:h-24 object-cover mirror-text"
+          />
+          {isRecording && (
+            <div className="absolute top-1.5 left-1.5 w-2.5 h-2.5 rounded-full bg-destructive animate-pulse" />
+          )}
+        </div>
+      )}
+
+      {/* Scrolling text - highest z-index for touch */}
+      <div ref={scrollRef} className="flex-1 overflow-hidden fade-mask relative z-[25]">
         <div
           className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[70vh] sm:pt-[50vh] pb-[50vh] ${mirrored ? "mirror-text" : ""}`}
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
@@ -455,24 +501,21 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </div>
       </div>
 
-      {/* Camera preview PiP */}
-      {cameraStream && (
-        <div className="absolute bottom-14 right-4 z-20 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg">
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            className="w-28 h-20 sm:w-40 sm:h-28 object-cover mirror-text"
-          />
-          {isRecording && (
-            <div className="absolute top-1.5 left-1.5 w-2.5 h-2.5 rounded-full bg-destructive animate-pulse" />
-          )}
+      {/* Back to Top button */}
+      {showBackToTop && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30">
+          <button
+            onClick={(e) => { e.stopPropagation(); scrollToTop(); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition"
+          >
+            <ArrowUp className="w-4 h-4" />
+            {t("backToTop")}
+          </button>
         </div>
       )}
 
       {/* Bottom hint */}
-      <div className={`absolute bottom-0 left-0 right-0 z-10 p-3 text-center transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
+      <div className={`absolute bottom-0 left-0 right-0 z-30 p-3 text-center transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
         <p className="text-xs text-muted-foreground">
           {isMobile ? t("mobileHint") : t("desktopHint")}
         </p>

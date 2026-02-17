@@ -75,6 +75,8 @@ const translations = {
     recordingSaved: "Inregistrare salvata!",
     recordingError: "Eroare la inregistrare",
     cameraNotAvailable: "Camera nu este disponibila",
+    startRecordAndScroll: "Inregistreaza si deruleaza",
+    backToTop: "Inapoi sus",
   },
   en: {
     appName: "TelePrompt",
@@ -143,6 +145,8 @@ const translations = {
     recordingSaved: "Recording saved!",
     recordingError: "Recording error",
     cameraNotAvailable: "Camera not available",
+    startRecordAndScroll: "Record & Scroll",
+    backToTop: "Back to Top",
   },
 } as const;
 

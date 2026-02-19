@@ -78,6 +78,7 @@ const translations = {
     cameraNotAvailable: "Camera nu este disponibila",
     startRecordAndScroll: "Inregistreaza si deruleaza",
     backToTop: "Inapoi sus",
+    togglePreview: "Comuta previzualizarea",
   },
   en: {
     appName: "TelePrompt",
@@ -149,6 +150,7 @@ const translations = {
     cameraNotAvailable: "Camera not available",
     startRecordAndScroll: "Record & Scroll",
     backToTop: "Back to Top",
+    togglePreview: "Toggle preview",
   },
 } as const;
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Minus, Plus, FlipHorizontal2, Pause, Play, Mic, MicOff, Video, VideoOff, ArrowUp } from "lucide-react";
+import { X, Minus, Plus, FlipHorizontal2, Pause, Play, Mic, MicOff, Video, VideoOff, ArrowUp, Eye, EyeOff } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
@@ -28,6 +28,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [cameraVisible, setCameraVisible] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -41,6 +42,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   // Keep refs in sync
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { playingRef.current = playing; }, [playing]);
+
+  // Assign srcObject whenever cameraStream or visibility changes
+  useEffect(() => {
+    if (videoRef.current && cameraStream) {
+      videoRef.current.srcObject = cameraStream;
+    }
+  }, [cameraStream, cameraVisible]);
 
   // Show Back to Top when paused and not at top
   useEffect(() => {
@@ -494,10 +502,12 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       </div>
 
       {/* Camera preview - fixed size, top-right, pointer-events-none */}
-      {cameraStream && (
+      {cameraStream && cameraVisible && (
         <div
-          className="fixed top-3 right-3 z-20 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg pointer-events-none"
+          onClick={(e) => { e.stopPropagation(); setCameraVisible(false); }}
+          className="fixed top-3 right-3 z-20 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg cursor-pointer"
           style={{ width: 120, height: 160 }}
+          title={t("togglePreview") || "Hide preview"}
         >
           <video
             ref={videoRef}
@@ -510,6 +520,15 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             <div className="absolute top-1.5 left-1.5 w-3 h-3 rounded-full bg-destructive animate-pulse border border-destructive-foreground" />
           )}
         </div>
+      )}
+      {cameraStream && !cameraVisible && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setCameraVisible(true); }}
+          className="fixed top-3 right-3 z-20 p-2 rounded-lg bg-secondary/80 text-foreground hover:text-primary transition-colors"
+          title={t("togglePreview") || "Show preview"}
+        >
+          <EyeOff className="w-5 h-5" />
+        </button>
       )}
 
       {/* Scrolling text - highest z-index for touch */}

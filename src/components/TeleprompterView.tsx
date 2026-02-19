@@ -77,7 +77,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   useEffect(() => {
     const scroll = () => {
       if (scrollRef.current && playingRef.current) {
-        scrollRef.current.scrollTop += speedRef.current * 0.3;
+        scrollRef.current.scrollTop += speedRef.current * 0.45;
       }
       animRef.current = requestAnimationFrame(scroll);
     };
@@ -262,6 +262,9 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   // Camera recording - rewritten for file integrity
   const startRecording = useCallback(async () => {
     try {
+      // Clear any old chunks before starting
+      chunksRef.current = [];
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: {
@@ -290,7 +293,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         return;
       }
 
-      chunksRef.current = [];
       const recorder = new MediaRecorder(stream, { mimeType });
 
       recorder.ondataavailable = (e) => {
@@ -302,9 +304,19 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       // CRITICAL: Download ONLY happens here, after stop is fully complete
       recorder.onstop = () => {
         toast.info(t("saving") || "Saving...");
+        // Small delay to ensure all chunks are flushed
         setTimeout(() => {
-          const blob = new Blob(chunksRef.current, { type: mimeType });
+          const chunks = chunksRef.current;
           chunksRef.current = [];
+
+          if (chunks.length === 0) {
+            toast.error(t("recordingError"));
+            stream.getTracks().forEach((track) => track.stop());
+            setCameraStream(null);
+            return;
+          }
+
+          const blob = new Blob(chunks, { type: mimeType });
 
           // Stop and release camera tracks AFTER blob is created
           stream.getTracks().forEach((track) => track.stop());
@@ -326,11 +338,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
           toast.success(t("recordingSaved"));
-        }, 200);
+        }, 300);
       };
 
       mediaRecorderRef.current = recorder;
-      // Start with timeslice to ensure regular data chunks
       recorder.start(500);
       setIsRecording(true);
     } catch (err) {
@@ -349,9 +360,9 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
+      // Do NOT null mediaRecorderRef here — let onstop finish first
     }
     setIsRecording(false);
-    mediaRecorderRef.current = null;
   }, []);
 
   // "Start Recording & Scroll" combo

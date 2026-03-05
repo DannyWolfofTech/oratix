@@ -146,104 +146,98 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     return () => clearTimeout(controlsTimeoutRef.current);
   }, [playing, isMobile]);
 
-  // Voice commands recognition
-  const startVoiceCommands = useCallback(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-    const cmdRecognition = new SpeechRecognition();
-    cmdRecognition.continuous = true;
-    cmdRecognition.interimResults = false;
-    cmdRecognition.lang = voiceLang;
-    cmdRecognition.onresult = (event: SpeechRecognitionEvent) => {
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          const transcript = event.results[i][0].transcript.trim().toLowerCase();
-          if (transcript.includes("start") || transcript.includes("pornește") || transcript.includes("play")) {
-            setPlaying(true);
-          } else if (transcript.includes("stop") || transcript.includes("oprește") || transcript.includes("pause") || transcript.includes("pauză")) {
-            setPlaying(false);
-          } else if (transcript.includes("restart") || transcript.includes("repornește") || transcript.includes("reset")) {
-            if (scrollRef.current) scrollRef.current.scrollTop = 0;
-            setPlaying(true);
-          }
-        }
-      }
-    };
-    cmdRecognition.onend = () => {
-      if (recognitionRef.current === cmdRecognition) {
-        try { cmdRecognition.start(); } catch { /* ignore */ }
-      }
-    };
-    cmdRecognition.onerror = (event: any) => {
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        setVoiceActive(false);
-        recognitionRef.current = null;
-      }
-    };
-    recognitionRef.current = cmdRecognition;
-    try { cmdRecognition.start(); setVoiceActive(true); } catch { setVoiceActive(false); recognitionRef.current = null; }
-  }, [voiceLang]);
-
-  // Voice recognition for speed adaptation
+  // Unified voice recognition: commands + pace adaptation
   const startVoice = useCallback(() => {
+    if (recognitionRef.current) {
+      // Prevent duplicate instances
+      try { recognitionRef.current.onend = null; recognitionRef.current.stop(); } catch { /* ignore */ }
+      recognitionRef.current = null;
+    }
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
+
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = voiceLang;
-    let totalWords = 0;
-    let sessionStart = Date.now();
+
+    // Rolling window for WPS calculation
+    const wordTimestamps: number[] = [];
+    const WINDOW_MS = 2000;
+
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const now = Date.now();
-      let finalWordCount = 0;
-      for (let i = 0; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalWordCount += event.results[i][0].transcript.trim().split(/\s+/).length;
-        }
-      }
-      if (finalWordCount > totalWords) {
-        totalWords = finalWordCount;
-        const elapsedSeconds = (now - sessionStart) / 1000;
-        if (elapsedSeconds > 1) {
-          const wps = totalWords / elapsedSeconds;
-          const mappedSpeed = Math.round(Math.min(10, Math.max(1, wps * 2.5)) * 2) / 2;
-          setSpeed(mappedSpeed);
-        }
-      }
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
-          const transcript = event.results[i][0].transcript.trim().toLowerCase();
-          if (transcript.includes("restart") || transcript.includes("repornește") || transcript.includes("reset")) {
+          const transcript = event.results[i][0].transcript.trim();
+          const lower = transcript.toLowerCase();
+
+          // Voice commands (case-insensitive, bilingual)
+          if (lower.includes("start") || lower.includes("pornește") || lower.includes("play")) {
+            setPlaying(true);
+          } else if (lower.includes("stop") || lower.includes("oprește") || lower.includes("pause") || lower.includes("pauză")) {
+            setPlaying(false);
+          } else if (lower.includes("restart") || lower.includes("repornește") || lower.includes("reset")) {
             if (scrollRef.current) scrollRef.current.scrollTop = 0;
             setPlaying(true);
-          } else if (transcript.includes("stop") || transcript.includes("oprește") || transcript.includes("pauză")) {
-            setPlaying(false);
-          } else if (transcript.includes("start") || transcript.includes("pornește") || transcript.includes("play")) {
-            setPlaying(true);
+          }
+
+          // Count words for pace adaptation
+          const wordCount = transcript.split(/\s+/).filter(Boolean).length;
+          for (let w = 0; w < wordCount; w++) {
+            wordTimestamps.push(now);
+          }
+
+          // Prune old timestamps outside rolling window
+          while (wordTimestamps.length > 0 && now - wordTimestamps[0] > WINDOW_MS) {
+            wordTimestamps.shift();
+          }
+
+          // Calculate WPS over rolling window and map to speed
+          if (wordTimestamps.length >= 2) {
+            const windowStart = wordTimestamps[0];
+            const elapsed = (now - windowStart) / 1000;
+            if (elapsed > 0.5) {
+              const wps = wordTimestamps.length / elapsed;
+              const mappedSpeed = Math.round(Math.min(10, Math.max(1, wps * 2.5)) * 2) / 2;
+              setSpeed(mappedSpeed);
+            }
           }
         }
       }
     };
+
+    let stopped = false;
+    recognition.onend = () => {
+      if (!stopped && recognitionRef.current === recognition) {
+        try { recognition.start(); } catch { stopped = true; setVoiceActive(false); recognitionRef.current = null; }
+      }
+    };
+
     recognition.onerror = (event: any) => {
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed" || event.error === "aborted") {
+        stopped = true;
         setVoiceActive(false);
         recognitionRef.current = null;
       }
     };
-    recognition.onend = () => {
-      if (recognitionRef.current === recognition) {
-        try { recognition.start(); } catch { setVoiceActive(false); recognitionRef.current = null; }
-      }
-    };
+
     recognitionRef.current = recognition;
-    try { recognition.start(); setVoiceActive(true); } catch { setVoiceActive(false); recognitionRef.current = null; }
+    try {
+      recognition.start();
+      setVoiceActive(true);
+    } catch {
+      setVoiceActive(false);
+      recognitionRef.current = null;
+    }
   }, [voiceLang]);
 
   const stopVoice = useCallback(() => {
     if (recognitionRef.current) {
       recognitionRef.current.onend = null;
-      recognitionRef.current.stop();
+      try { recognitionRef.current.stop(); } catch { /* ignore */ }
       recognitionRef.current = null;
     }
     setVoiceActive(false);

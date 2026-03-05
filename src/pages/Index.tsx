@@ -1,42 +1,35 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { useScripts, Script } from "@/hooks/useScripts";
 import { useLanguage } from "@/hooks/useLanguage";
-import { Navigate } from "react-router-dom";
 import ScriptList from "@/components/ScriptList";
 import ScriptEditor from "@/components/ScriptEditor";
 import TeleprompterView from "@/components/TeleprompterView";
-import { Button } from "@/components/ui/button";
 import AboutDialog from "@/components/AboutDialog";
-import { LogOut, Monitor, Menu, X, Globe } from "lucide-react";
+import { Monitor, Menu, X, Globe } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
-  const { user, loading, signOut } = useAuth();
   const { scripts, isLoading, createScript, updateScript, deleteScript } = useScripts();
   const { t, lang, setLang } = useLanguage();
   const [activeScript, setActiveScript] = useState<Script | null>(null);
   const [playingContent, setPlayingContent] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  if (loading) return null;
-  if (!user) return <Navigate to="/auth" replace />;
-
-  const handleCreate = async () => {
-    const result = await createScript.mutateAsync({ title: t("untitledScript"), content: "" });
+  const handleCreate = () => {
+    const result = createScript(t("untitledScript"), "");
     setActiveScript(result);
     setSidebarOpen(false);
   };
 
-  const handleSave = async (title: string, content: string) => {
+  const handleSave = (title: string, content: string) => {
     if (!activeScript) return;
-    const result = await updateScript.mutateAsync({ id: activeScript.id, title, content });
-    setActiveScript(result);
+    const result = updateScript(activeScript.id, title, content);
+    if (result) setActiveScript(result);
     toast.success(t("scriptSaved"));
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteScript.mutateAsync(id);
+  const handleDelete = (id: string) => {
+    deleteScript(id);
     if (activeScript?.id === id) setActiveScript(null);
     toast.success(t("scriptDeleted"));
   };
@@ -56,7 +49,6 @@ const Index = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-1.5 text-muted-foreground hover:text-foreground transition-colors">
@@ -78,15 +70,10 @@ const Index = () => {
             <Globe className="w-3.5 h-3.5" />
             {lang === "ro" ? "EN" : "RO"}
           </button>
-          <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground hover:text-foreground">
-            <LogOut className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline">{t("signOut")}</span>
-          </Button>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
         <aside
           className={`
             ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -109,18 +96,16 @@ const Index = () => {
           )}
         </aside>
 
-        {/* Backdrop for mobile sidebar */}
         {sidebarOpen && (
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-10 lg:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
-        {/* Editor */}
         <main className="flex-1 flex flex-col overflow-hidden">
           <ScriptEditor
             script={activeScript}
             onSave={handleSave}
             onPlay={handlePlay}
-            isSaving={updateScript.isPending}
+            isSaving={false}
           />
         </main>
       </div>

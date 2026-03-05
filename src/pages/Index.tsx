@@ -5,7 +5,7 @@ import ScriptList from "@/components/ScriptList";
 import ScriptEditor from "@/components/ScriptEditor";
 import TeleprompterView from "@/components/TeleprompterView";
 import AboutDialog from "@/components/AboutDialog";
-import { Monitor, Menu, X } from "lucide-react";
+import { Clapperboard, Menu, X } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
@@ -55,8 +55,8 @@ const Index = () => {
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <Monitor className="w-4 h-4 text-primary" />
+            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
+              <Clapperboard className="w-4 h-4 text-foreground" />
             </div>
             <h1 className="text-lg font-bold tracking-tight">{t("appName")}</h1>
           </div>

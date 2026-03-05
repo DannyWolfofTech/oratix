@@ -404,14 +404,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                     setPlaying(false);
                   }
                 }}
-                className="p-3 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition shadow-[0_0_15px_hsl(var(--primary)/0.5)]"
+                className="p-3 rounded-full bg-foreground text-background hover:opacity-80 transition"
               >
                 {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </button>
               <button
                 onClick={() => setMirrored(!mirrored)}
                 className={`p-3 rounded-full transition-colors ${
-                  mirrored ? "bg-primary text-primary-foreground shadow-[0_0_15px_hsl(var(--primary)/0.5)]" : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-primary"
+                  mirrored ? "bg-foreground text-background" : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground"
                 }`}
               >
                 <FlipHorizontal2 className="w-5 h-5" />
@@ -428,11 +428,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           {/* Speed slider */}
           <div className="flex items-center gap-3">
             <span className="uppercase tracking-wider text-[10px] font-mono text-muted-foreground/80 w-14 shrink-0">{t("speed")}</span>
-            <button onClick={() => setSpeed((s) => Math.max(s - 0.5, 1))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-primary transition">
+            <button onClick={() => setSpeed((s) => Math.max(s - 0.5, 1))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition">
               <Minus className="w-3.5 h-3.5" />
             </button>
             <Slider value={[speed]} onValueChange={([v]) => setSpeed(v)} min={1} max={10} step={0.5} className="flex-1" />
-            <button onClick={() => setSpeed((s) => Math.min(s + 0.5, 10))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-primary transition">
+            <button onClick={() => setSpeed((s) => Math.min(s + 0.5, 10))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition">
               <Plus className="w-3.5 h-3.5" />
             </button>
             <span className="text-[10px] font-mono text-foreground/90 w-8 text-right">{speed}x</span>
@@ -441,9 +441,9 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           {/* Font size slider */}
           <div className="flex items-center gap-3">
             <span className="uppercase tracking-wider text-[10px] font-mono text-muted-foreground/80 w-14 shrink-0">{t("size")}</span>
-            <button onClick={() => setFontSize((s) => Math.max(s - 4, 16))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-primary text-xs font-mono transition">A</button>
+            <button onClick={() => setFontSize((s) => Math.max(s - 4, 16))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground text-xs font-mono transition">A</button>
             <Slider value={[fontSize]} onValueChange={([v]) => setFontSize(v)} min={16} max={80} step={2} className="flex-1" />
-            <button onClick={() => setFontSize((s) => Math.min(s + 4, 80))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-primary text-base font-mono font-bold transition">A</button>
+            <button onClick={() => setFontSize((s) => Math.min(s + 4, 80))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground text-base font-mono font-bold transition">A</button>
             <span className="text-[10px] font-mono text-foreground/90 w-8 text-right">{fontSize}px</span>
           </div>
 
@@ -453,8 +453,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               onClick={voiceActive ? stopVoice : startVoice}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-colors ${
                 voiceActive
-                  ? "bg-primary text-primary-foreground animate-pulse shadow-[0_0_15px_hsl(var(--primary)/0.5)]"
-                  : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-primary"
+                  ? "bg-foreground text-background animate-pulse"
+                  : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground"
               }`}
             >
               {voiceActive ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
@@ -462,14 +462,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             </button>
             <button
               onClick={toggleLang}
-              className="px-4 py-2 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground text-xs font-medium hover:text-primary transition-colors"
+              className="px-4 py-2 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground text-xs font-medium transition-colors"
             >
               {voiceLang === "en-US" ? "🇬🇧 EN" : "🇷🇴 RO"}
             </button>
             {!cameraStream ? (
               <button
                 onClick={openCamera}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-primary transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
               >
                 <Video className="w-4 h-4" />
                 {t("openCamera")}
@@ -485,7 +485,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 </button>
                 <button
                   onClick={closeCamera}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-primary transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
                 >
                   <VideoOff className="w-4 h-4" />
                   {t("closeCamera")}
@@ -529,7 +529,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {cameraStream && !cameraVisible && (
         <button
           onClick={(e) => { e.stopPropagation(); setCameraVisible(true); }}
-          className="fixed top-3 right-3 z-20 p-3 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-primary transition-colors"
+          className="fixed top-3 right-3 z-20 p-3 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
           title={t("togglePreview") || "Show preview"}
         >
           <EyeOff className="w-5 h-5" />
@@ -538,13 +538,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
       {/* Reading guide - subtle horizontal bar at top 20% */}
       <div className="absolute left-0 right-0 z-[24] pointer-events-none" style={{ top: '18%' }}>
-        <div className="w-full h-1 bg-primary/15 rounded-full" />
+        <div className="w-full h-1 bg-foreground/10 rounded-full" />
       </div>
 
       {/* Countdown overlay */}
       {countdown !== null && (
         <div className="absolute inset-0 z-[35] flex items-center justify-center pointer-events-none">
-          <span className="text-[120px] font-bold text-primary animate-pulse drop-shadow-lg">{countdown}</span>
+          <span className="text-[120px] font-bold text-foreground animate-pulse drop-shadow-lg">{countdown}</span>
         </div>
       )}
 
@@ -565,7 +565,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30">
           <button
             onClick={(e) => { e.stopPropagation(); scrollToTop(); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium shadow-lg hover:opacity-90 transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium shadow-lg hover:opacity-80 transition"
           >
             <ArrowUp className="w-4 h-4" />
             {t("backToTop")}

@@ -59,7 +59,7 @@ const translations = {
   close: "Inchide",
   record: "Inregistreaza",
   recording: "Inregistrare...",
-  stopRecording: "Opreste",
+  stopRecording: "Oprește Înregistrarea",
   recordingSaved: "Inregistrare salvata!",
   saving: "Se salveaza...",
   recordingError: "Eroare la inregistrare",
@@ -67,6 +67,9 @@ const translations = {
   startRecordAndScroll: "Inregistreaza si deruleaza",
   backToTop: "Inapoi sus",
   togglePreview: "Comuta previzualizarea",
+  openCamera: "Deschide Camera",
+  closeCamera: "Închide Camera",
+  startRecording: "Începe Înregistrarea",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

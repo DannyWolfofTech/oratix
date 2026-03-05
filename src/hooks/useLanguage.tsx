@@ -70,6 +70,8 @@ const translations = {
   openCamera: "Deschide Camera",
   closeCamera: "Închide Camera",
   startRecording: "Începe Înregistrarea",
+  cornerView: "Colț",
+  fullscreenView: "Ecran complet",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

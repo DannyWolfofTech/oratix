@@ -24,6 +24,16 @@ const ScriptEditor = ({ script, onSave, onPlay, isSaving }: ScriptEditorProps) =
     }
   }, [script?.id]);
 
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
+    const defaultTitle = t("untitledScript");
+    if (!title || title === defaultTitle) {
+      const firstLine = newContent.split("\n").find((line) => line.trim() !== "");
+      if (firstLine) {
+        setTitle(firstLine.trim().slice(0, 50));
+      }
+    }
+  };
   if (!script) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground px-6">
@@ -62,7 +72,7 @@ const ScriptEditor = ({ script, onSave, onPlay, isSaving }: ScriptEditorProps) =
       </div>
       <textarea
         value={content}
-        onChange={(e) => setContent(e.target.value)}
+        onChange={(e) => handleContentChange(e.target.value)}
         placeholder={t("pasteOrType")}
         className="flex-1 w-full bg-transparent p-4 sm:p-6 text-foreground resize-none focus:outline-none text-sm leading-relaxed placeholder:text-muted-foreground"
       />

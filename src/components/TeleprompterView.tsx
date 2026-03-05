@@ -293,6 +293,22 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setIsRecording(false);
   }, [cameraStream]);
 
+  // Countdown logic
+  const startPlayWithCountdown = useCallback(() => {
+    setCountdown(3);
+  }, []);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      setCountdown(null);
+      setPlaying(true);
+      return;
+    }
+    const timer = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
   const startRecording = useCallback(() => {
     if (!cameraStream) return;
     chunksRef.current = [];
@@ -340,7 +356,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     mediaRecorderRef.current = recorder;
     recorder.start(500);
     setIsRecording(true);
-  }, [cameraStream, t]);
+    startPlayWithCountdown();
+  }, [cameraStream, t, startPlayWithCountdown]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -349,27 +366,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setIsRecording(false);
   }, []);
 
-  // Countdown logic
-  const startPlayWithCountdown = useCallback(() => {
-    setCountdown(3);
-  }, []);
-
-  useEffect(() => {
-    if (countdown === null) return;
-    if (countdown === 0) {
-      setCountdown(null);
-      setPlaying(true);
-      return;
-    }
-    const timer = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown]);
-
   const startRecordAndScroll = useCallback(async () => {
     if (!cameraStream) await openCamera();
     startRecording();
-    startPlayWithCountdown();
-  }, [cameraStream, openCamera, startRecording, startPlayWithCountdown]);
+  }, [cameraStream, openCamera, startRecording]);
 
   // Cleanup camera on unmount
   useEffect(() => {
@@ -380,6 +380,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     };
   }, []);
 
+  const isFraming = !!(cameraStream && !isRecording && !playing && countdown === null);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-teleprompter-bg flex flex-col"
@@ -388,7 +390,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     >
       {/* Controls overlay */}
       <div
-        className={`absolute top-0 left-0 right-0 z-30 p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
+        className={`absolute top-0 left-0 right-0 z-50 p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
@@ -507,12 +509,16 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </div>
       </div>
 
-      {/* Camera preview */}
+      {/* Camera preview - fullscreen framing or corner */}
       {cameraStream && cameraVisible && (
         <div
-          onClick={(e) => { e.stopPropagation(); setCameraVisible(false); }}
-          className="fixed top-3 right-3 z-20 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 cursor-pointer w-40 h-[213px] sm:w-64 sm:h-[341px]"
-          title={t("togglePreview") || "Hide preview"}
+          onClick={(e) => { e.stopPropagation(); if (!isFraming) setCameraVisible(false); }}
+          className={`fixed overflow-hidden shadow-2xl transition-all duration-500 ease-in-out ${
+            isFraming
+              ? "inset-0 z-[40] w-full h-full bg-black rounded-none border-none"
+              : "top-3 right-3 z-20 rounded-2xl ring-1 ring-white/10 cursor-pointer w-40 h-[213px] sm:w-64 sm:h-[341px]"
+          }`}
+          title={isFraming ? undefined : (t("togglePreview") || "Hide preview")}
         >
           <video
             ref={videoRef}
@@ -526,7 +532,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           )}
         </div>
       )}
-      {cameraStream && !cameraVisible && (
+      {cameraStream && !cameraVisible && !isFraming && (
         <button
           onClick={(e) => { e.stopPropagation(); setCameraVisible(true); }}
           className="fixed top-3 right-3 z-20 p-3 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
@@ -536,32 +542,36 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </button>
       )}
 
-      {/* Reading guide - subtle horizontal bar at top 20% */}
-      <div className="absolute left-0 right-0 z-[24] pointer-events-none" style={{ top: '18%' }}>
-        <div className="w-full h-1 bg-foreground/10 rounded-full" />
-      </div>
+      {/* Reading guide */}
+      {!isFraming && (
+        <div className="absolute left-0 right-0 z-[24] pointer-events-none" style={{ top: '18%' }}>
+          <div className="w-full h-1 bg-foreground/10 rounded-full" />
+        </div>
+      )}
 
       {/* Countdown overlay */}
       {countdown !== null && (
-        <div className="absolute inset-0 z-[35] flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
           <span className="text-[120px] font-bold text-foreground animate-pulse drop-shadow-lg">{countdown}</span>
         </div>
       )}
 
       {/* Scrolling text */}
-      <div ref={scrollRef} className="flex-1 overflow-hidden fade-mask relative z-[25]" style={{ scrollBehavior: 'auto' }}>
-        <div
-          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[50vh] ${mirrored ? "mirror-text" : ""}`}
-          style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
-        >
-          <p className="text-teleprompter-text font-sans font-medium whitespace-pre-wrap">
-            {content}
-          </p>
+      {!isFraming && (
+        <div ref={scrollRef} className="flex-1 overflow-hidden fade-mask relative z-[25]" style={{ scrollBehavior: 'auto' }}>
+          <div
+            className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[50vh] ${mirrored ? "mirror-text" : ""}`}
+            style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
+          >
+            <p className="text-teleprompter-text font-sans font-medium whitespace-pre-wrap">
+              {content}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Back to Top button */}
-      {showBackToTop && (
+      {showBackToTop && !isFraming && (
         <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30">
           <button
             onClick={(e) => { e.stopPropagation(); scrollToTop(); }}

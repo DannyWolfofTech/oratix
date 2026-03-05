@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Minus, Plus, FlipHorizontal2, Pause, Play, Mic, MicOff, Video, VideoOff, ArrowUp, EyeOff } from "lucide-react";
+import { X, Minus, Plus, Pause, Play, Video, VideoOff, ArrowUp, EyeOff } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
@@ -10,22 +10,14 @@ interface TeleprompterViewProps {
   onClose: () => void;
 }
 
-interface SpeechRecognitionEvent {
-  resultIndex: number;
-  results: SpeechRecognitionResultList;
-}
-
 const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const isMobile = useIsMobile();
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const [speed, setSpeed] = useState(1.5);
   const [fontSize, setFontSize] = useState(() => (window.innerWidth < 768 ? 28 : 42));
-  const [mirrored, setMirrored] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showControls, setShowControls] = useState(true);
-  const [voiceActive, setVoiceActive] = useState(false);
-  const [voiceLang, setVoiceLang] = useState<"en-US" | "ro-RO">(lang === "ro" ? "ro-RO" : "en-US");
   const [isRecording, setIsRecording] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -33,7 +25,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
-  const recognitionRef = useRef<any>(null);
   const speedRef = useRef(speed);
   const fontSizeRef = useRef(fontSize);
   const playingRef = useRef(playing);
@@ -85,7 +76,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   }, []);
 
   // Font-relative scrolling via requestAnimationFrame
-  // At 1x: ~1 line every 2.5s (slow deliberate pace). Speed scales linearly.
   useEffect(() => {
     let lastTime = performance.now();
     const scroll = (now: number) => {
@@ -154,114 +144,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     }
     return () => clearTimeout(controlsTimeoutRef.current);
   }, [playing, isMobile]);
-
-  // Unified voice recognition: commands + pace adaptation
-  const startVoice = useCallback(() => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.onend = null; recognitionRef.current.stop(); } catch { /* ignore */ }
-      recognitionRef.current = null;
-    }
-
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = voiceLang;
-
-    const wordTimestamps: number[] = [];
-    const WINDOW_MS = 2000;
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const now = Date.now();
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          const transcript = event.results[i][0].transcript.trim();
-          const lower = transcript.toLowerCase();
-
-          if (lower.includes("start") || lower.includes("pornește") || lower.includes("play")) {
-            setPlaying(true);
-          } else if (lower.includes("stop") || lower.includes("oprește") || lower.includes("pause") || lower.includes("pauză")) {
-            setPlaying(false);
-          } else if (lower.includes("restart") || lower.includes("repornește") || lower.includes("reset")) {
-            if (scrollRef.current) scrollRef.current.scrollTop = 0;
-            setPlaying(true);
-          }
-
-          const wordCount = transcript.split(/\s+/).filter(Boolean).length;
-          for (let w = 0; w < wordCount; w++) {
-            wordTimestamps.push(now);
-          }
-
-          while (wordTimestamps.length > 0 && now - wordTimestamps[0] > WINDOW_MS) {
-            wordTimestamps.shift();
-          }
-
-          if (wordTimestamps.length >= 2) {
-            const windowStart = wordTimestamps[0];
-            const elapsed = (now - windowStart) / 1000;
-            if (elapsed > 0.5) {
-              const wps = wordTimestamps.length / elapsed;
-              const mappedSpeed = Math.round(Math.min(10, Math.max(1, wps * 2.5)) * 2) / 2;
-              setSpeed(mappedSpeed);
-            }
-          }
-        }
-      }
-    };
-
-    let stopped = false;
-    recognition.onend = () => {
-      if (!stopped && recognitionRef.current === recognition) {
-        try { recognition.start(); } catch { stopped = true; setVoiceActive(false); recognitionRef.current = null; }
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      if (event.error === "not-allowed" || event.error === "service-not-allowed" || event.error === "aborted") {
-        stopped = true;
-        setVoiceActive(false);
-        recognitionRef.current = null;
-      }
-    };
-
-    recognitionRef.current = recognition;
-    try {
-      recognition.start();
-      setVoiceActive(true);
-    } catch {
-      setVoiceActive(false);
-      recognitionRef.current = null;
-    }
-  }, [voiceLang]);
-
-  const stopVoice = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.onend = null;
-      try { recognitionRef.current.stop(); } catch { /* ignore */ }
-      recognitionRef.current = null;
-    }
-    setVoiceActive(false);
-  }, []);
-
-  useEffect(() => { return () => { stopVoice(); }; }, [stopVoice]);
-
-  const toggleLang = () => {
-    const newLang = voiceLang === "en-US" ? "ro-RO" : "en-US";
-    setVoiceLang(newLang);
-    if (voiceActive) stopVoice();
-  };
-
-  const prevLangRef = useRef(voiceLang);
-  useEffect(() => {
-    if (prevLangRef.current !== voiceLang && !voiceActive) {
-      const timer = setTimeout(() => startVoice(), 150);
-      prevLangRef.current = voiceLang;
-      return () => clearTimeout(timer);
-    }
-    prevLangRef.current = voiceLang;
-  }, [voiceLang, voiceActive, startVoice]);
 
   // Camera: open/close separately from recording
   const openCamera = useCallback(async () => {
@@ -410,14 +292,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               >
                 {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </button>
-              <button
-                onClick={() => setMirrored(!mirrored)}
-                className={`p-3 rounded-full transition-colors ${
-                  mirrored ? "bg-foreground text-background" : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground"
-                }`}
-              >
-                <FlipHorizontal2 className="w-5 h-5" />
-              </button>
             </div>
             <button
               onClick={onClose}
@@ -449,25 +323,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             <span className="text-[10px] font-mono text-foreground/90 w-8 text-right">{fontSize}px</span>
           </div>
 
-          {/* Voice & Recording controls */}
+          {/* Recording controls */}
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={voiceActive ? stopVoice : startVoice}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-colors ${
-                voiceActive
-                  ? "bg-foreground text-background animate-pulse"
-                  : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground"
-              }`}
-            >
-              {voiceActive ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-              {voiceActive ? t("voiceOn") : t("voicePace")}
-            </button>
-            <button
-              onClick={toggleLang}
-              className="px-4 py-2 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground text-xs font-medium transition-colors"
-            >
-              {voiceLang === "en-US" ? "🇬🇧 EN" : "🇷🇴 RO"}
-            </button>
             {!cameraStream ? (
               <button
                 onClick={openCamera}
@@ -502,9 +359,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 {t("stopRecording")}
               </button>
             )}
-            {voiceActive && (
-              <span className="text-xs text-muted-foreground">{t("adaptingSpeed")}</span>
-            )}
           </div>
         </div>
       </div>
@@ -525,7 +379,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             autoPlay
             muted
             playsInline
-            className="w-full h-full object-cover mirror-text"
+            className="w-full h-full object-cover"
           />
           {isRecording && (
             <div className="absolute top-1.5 left-1.5 w-3 h-3 rounded-full bg-destructive animate-pulse border border-destructive-foreground" />
@@ -560,7 +414,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {!isFraming && (
         <div ref={scrollRef} className="flex-1 overflow-hidden fade-mask relative z-[25]" style={{ scrollBehavior: 'auto' }}>
           <div
-            className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[50vh] ${mirrored ? "mirror-text" : ""}`}
+            className="max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[50vh]"
             style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
           >
             <p className="text-teleprompter-text font-sans font-medium whitespace-pre-wrap">

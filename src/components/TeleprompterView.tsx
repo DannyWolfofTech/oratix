@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Minus, Plus, FlipHorizontal2, Pause, Play, Mic, MicOff, Video, VideoOff, ArrowUp, Eye, EyeOff } from "lucide-react";
+import { X, Minus, Plus, FlipHorizontal2, Pause, Play, Mic, MicOff, Video, VideoOff, ArrowUp, EyeOff } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
@@ -22,6 +22,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [fontSize, setFontSize] = useState(() => (window.innerWidth < 768 ? 28 : 42));
   const [mirrored, setMirrored] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [voiceActive, setVoiceActive] = useState(false);
   const [voiceLang, setVoiceLang] = useState<"en-US" | "ro-RO">(lang === "ro" ? "ro-RO" : "en-US");
@@ -34,6 +35,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
   const recognitionRef = useRef<any>(null);
   const speedRef = useRef(speed);
+  const fontSizeRef = useRef(fontSize);
   const playingRef = useRef(playing);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -41,6 +43,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   // Keep refs in sync
   useEffect(() => { speedRef.current = speed; }, [speed]);
+  useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
   useEffect(() => { playingRef.current = playing; }, [playing]);
 
   // Assign srcObject whenever cameraStream or visibility changes
@@ -81,11 +84,17 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setShowBackToTop(false);
   }, []);
 
-  // Smooth scrolling via requestAnimationFrame
+  // Font-relative scrolling via requestAnimationFrame
+  // At 1x: ~1 line every 2.5s (slow deliberate pace). Speed scales linearly.
   useEffect(() => {
-    const scroll = () => {
+    let lastTime = performance.now();
+    const scroll = (now: number) => {
+      const delta = now - lastTime;
+      lastTime = now;
       if (scrollRef.current && playingRef.current) {
-        scrollRef.current.scrollTop += speedRef.current * 0.45;
+        const lineH = fontSizeRef.current * 1.5;
+        const pxPerMs = (speedRef.current * lineH) / 2500;
+        scrollRef.current.scrollTop += pxPerMs * delta;
       }
       animRef.current = requestAnimationFrame(scroll);
     };
@@ -149,7 +158,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   // Unified voice recognition: commands + pace adaptation
   const startVoice = useCallback(() => {
     if (recognitionRef.current) {
-      // Prevent duplicate instances
       try { recognitionRef.current.onend = null; recognitionRef.current.stop(); } catch { /* ignore */ }
       recognitionRef.current = null;
     }
@@ -162,19 +170,16 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     recognition.interimResults = true;
     recognition.lang = voiceLang;
 
-    // Rolling window for WPS calculation
     const wordTimestamps: number[] = [];
     const WINDOW_MS = 2000;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const now = Date.now();
-
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const transcript = event.results[i][0].transcript.trim();
           const lower = transcript.toLowerCase();
 
-          // Voice commands (case-insensitive, bilingual)
           if (lower.includes("start") || lower.includes("pornește") || lower.includes("play")) {
             setPlaying(true);
           } else if (lower.includes("stop") || lower.includes("oprește") || lower.includes("pause") || lower.includes("pauză")) {
@@ -184,18 +189,15 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             setPlaying(true);
           }
 
-          // Count words for pace adaptation
           const wordCount = transcript.split(/\s+/).filter(Boolean).length;
           for (let w = 0; w < wordCount; w++) {
             wordTimestamps.push(now);
           }
 
-          // Prune old timestamps outside rolling window
           while (wordTimestamps.length > 0 && now - wordTimestamps[0] > WINDOW_MS) {
             wordTimestamps.shift();
           }
 
-          // Calculate WPS over rolling window and map to speed
           if (wordTimestamps.length >= 2) {
             const windowStart = wordTimestamps[0];
             const elapsed = (now - windowStart) / 1000;
@@ -261,24 +263,16 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     prevLangRef.current = voiceLang;
   }, [voiceLang, voiceActive, startVoice]);
 
-  // Camera recording - rewritten for file integrity
+  // Camera recording
   const startRecording = useCallback(async () => {
     try {
-      // Clear any old chunks before starting
       chunksRef.current = [];
-
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 44100,
-        },
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
       });
       setCameraStream(stream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+      if (videoRef.current) videoRef.current.srcObject = stream;
 
       const mimeType = MediaRecorder.isTypeSupported("video/mp4")
         ? "video/mp4"
@@ -296,39 +290,25 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       }
 
       const recorder = new MediaRecorder(stream, { mimeType });
-
       recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      // CRITICAL: Download ONLY happens here, after stop is fully complete
       recorder.onstop = () => {
         toast.info(t("saving") || "Saving...");
-        // Small delay to ensure all chunks are flushed
         setTimeout(() => {
           const chunks = chunksRef.current;
           chunksRef.current = [];
-
           if (chunks.length === 0) {
             toast.error(t("recordingError"));
             stream.getTracks().forEach((track) => track.stop());
             setCameraStream(null);
             return;
           }
-
           const blob = new Blob(chunks, { type: mimeType });
-
-          // Stop and release camera tracks AFTER blob is created
           stream.getTracks().forEach((track) => track.stop());
           setCameraStream(null);
-
-          if (blob.size === 0) {
-            toast.error(t("recordingError"));
-            return;
-          }
-
+          if (blob.size === 0) { toast.error(t("recordingError")); return; }
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.style.display = "none";
@@ -357,23 +337,35 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     }
   }, [t]);
 
-  // Stop: ONLY call recorder.stop(). Do NOT touch stream/camera here.
-  // The onstop handler above handles cleanup + download.
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
-      // Do NOT null mediaRecorderRef here — let onstop finish first
     }
     setIsRecording(false);
   }, []);
 
-  // "Start Recording & Scroll" combo
+  // Countdown logic
+  const startPlayWithCountdown = useCallback(() => {
+    setCountdown(3);
+  }, []);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      setCountdown(null);
+      setPlaying(true);
+      return;
+    }
+    const timer = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
   const startRecordAndScroll = useCallback(async () => {
     await startRecording();
-    setPlaying(true);
-  }, [startRecording]);
+    startPlayWithCountdown();
+  }, [startRecording, startPlayWithCountdown]);
 
-  // Cleanup camera on unmount only
+  // Cleanup camera on unmount
   useEffect(() => {
     return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -381,6 +373,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       }
     };
   }, []);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-teleprompter-bg flex flex-col"
@@ -399,7 +392,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setPlaying(!playing)}
+                onClick={() => {
+                  if (!playing) {
+                    startPlayWithCountdown();
+                  } else {
+                    setPlaying(false);
+                  }
+                }}
                 className="p-2.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition"
               >
                 {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
@@ -495,7 +494,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </div>
       </div>
 
-      {/* Camera preview - fixed size, top-right, pointer-events-none */}
+      {/* Camera preview */}
       {cameraStream && cameraVisible && (
         <div
           onClick={(e) => { e.stopPropagation(); setCameraVisible(false); }}
@@ -525,10 +524,22 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </button>
       )}
 
-      {/* Scrolling text - highest z-index for touch */}
-      <div ref={scrollRef} className="flex-1 overflow-hidden fade-mask relative z-[25]">
+      {/* Reading guide - subtle horizontal bar at top 20% */}
+      <div className="absolute left-0 right-0 z-[24] pointer-events-none" style={{ top: '18%' }}>
+        <div className="w-full h-1 bg-primary/15 rounded-full" />
+      </div>
+
+      {/* Countdown overlay */}
+      {countdown !== null && (
+        <div className="absolute inset-0 z-[35] flex items-center justify-center pointer-events-none">
+          <span className="text-[120px] font-bold text-primary animate-pulse drop-shadow-lg">{countdown}</span>
+        </div>
+      )}
+
+      {/* Scrolling text */}
+      <div ref={scrollRef} className="flex-1 overflow-hidden fade-mask relative z-[25]" style={{ scrollBehavior: 'auto' }}>
         <div
-          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[70vh] sm:pt-[50vh] pb-[50vh] ${mirrored ? "mirror-text" : ""}`}
+          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[50vh] ${mirrored ? "mirror-text" : ""}`}
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p className="text-teleprompter-text font-sans font-medium whitespace-pre-wrap">

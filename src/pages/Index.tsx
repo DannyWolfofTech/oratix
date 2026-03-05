@@ -5,12 +5,12 @@ import ScriptList from "@/components/ScriptList";
 import ScriptEditor from "@/components/ScriptEditor";
 import TeleprompterView from "@/components/TeleprompterView";
 import AboutDialog from "@/components/AboutDialog";
-import { Monitor, Menu, X, Globe } from "lucide-react";
+import { Monitor, Menu, X } from "lucide-react";
 import { toast } from "sonner";
 
 const Index = () => {
   const { scripts, isLoading, createScript, updateScript, deleteScript } = useScripts();
-  const { t, lang, setLang } = useLanguage();
+  const { t } = useLanguage();
   const [activeScript, setActiveScript] = useState<Script | null>(null);
   const [playingContent, setPlayingContent] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -63,13 +63,6 @@ const Index = () => {
         </div>
         <div className="flex items-center gap-2">
           <AboutDialog />
-          <button
-            onClick={() => setLang(lang === "ro" ? "en" : "ro")}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            {lang === "ro" ? "EN" : "RO"}
-          </button>
         </div>
       </header>
 

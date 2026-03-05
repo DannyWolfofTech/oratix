@@ -39,8 +39,8 @@ const AboutDialog = () => {
         <div className="grid gap-3 mt-4">
           {features.map(({ icon: Icon, titleKey, descKey }) => (
             <div key={titleKey} className="flex gap-3 items-start">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                <Icon className="w-4 h-4 text-primary" />
+              <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center shrink-0 mt-0.5">
+                <Icon className="w-4 h-4 text-foreground" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold">{t(titleKey as any)}</h3>

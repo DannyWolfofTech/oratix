@@ -1,6 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "./useAuth";
+import { useState, useEffect, useCallback } from "react";
 
 export interface Script {
   id: string;
@@ -8,66 +6,60 @@ export interface Script {
   content: string;
   created_at: string;
   updated_at: string;
-  user_id: string;
+}
+
+const STORAGE_KEY = "teleprompter_scripts";
+
+function loadScripts(): Script[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveScripts(scripts: Script[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(scripts));
 }
 
 export function useScripts() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const [scripts, setScripts] = useState<Script[]>(() => loadScripts());
 
-  const scriptsQuery = useQuery({
-    queryKey: ["scripts", user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("scripts")
-        .select("*")
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return data as Script[];
-    },
-    enabled: !!user,
-  });
+  useEffect(() => {
+    saveScripts(scripts);
+  }, [scripts]);
 
-  const createScript = useMutation({
-    mutationFn: async ({ title, content }: { title: string; content: string }) => {
-      const { data, error } = await supabase
-        .from("scripts")
-        .insert({ title, content, user_id: user!.id })
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Script;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["scripts"] }),
-  });
+  const createScript = useCallback((title: string, content: string): Script => {
+    const now = new Date().toISOString();
+    const script: Script = {
+      id: crypto.randomUUID(),
+      title,
+      content,
+      created_at: now,
+      updated_at: now,
+    };
+    setScripts((prev) => [script, ...prev]);
+    return script;
+  }, []);
 
-  const updateScript = useMutation({
-    mutationFn: async ({ id, title, content }: { id: string; title: string; content: string }) => {
-      const { data, error } = await supabase
-        .from("scripts")
-        .update({ title, content })
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Script;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["scripts"] }),
-  });
+  const updateScript = useCallback((id: string, title: string, content: string): Script | null => {
+    let updated: Script | null = null;
+    setScripts((prev) =>
+      prev.map((s) => {
+        if (s.id === id) {
+          updated = { ...s, title, content, updated_at: new Date().toISOString() };
+          return updated;
+        }
+        return s;
+      })
+    );
+    return updated;
+  }, []);
 
-  const deleteScript = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("scripts").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["scripts"] }),
-  });
+  const deleteScript = useCallback((id: string) => {
+    setScripts((prev) => prev.filter((s) => s.id !== id));
+  }, []);
 
-  return {
-    scripts: scriptsQuery.data ?? [],
-    isLoading: scriptsQuery.isLoading,
-    createScript,
-    updateScript,
-    deleteScript,
-  };
+  return { scripts, isLoading: false, createScript, updateScript, deleteScript };
 }

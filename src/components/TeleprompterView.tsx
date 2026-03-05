@@ -247,6 +247,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
+    setPlaying(false);
+    setCountdown(null);
   }, []);
 
   const startRecordAndScroll = useCallback(async () => {
@@ -264,6 +266,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   }, []);
 
   const isFullscreenCamera = !!(cameraStream && cameraMode === "fullscreen");
+  const isFraming = !!(cameraStream && !isRecording && !playing && countdown === null && cameraMode === "fullscreen");
 
   return (
     <div
@@ -417,7 +420,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       )}
 
       {/* Scrolling text */}
-      <div ref={scrollRef} className="flex-1 overflow-hidden fade-mask relative z-[25]" style={{ scrollBehavior: 'auto' }}>
+      <div ref={scrollRef} className={`flex-1 overflow-hidden fade-mask relative z-[25] transition-opacity duration-300 ${isFraming ? "opacity-0 pointer-events-none" : "opacity-100"}`} style={{ scrollBehavior: 'auto' }}>
         <div
           className="max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[50vh]"
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}

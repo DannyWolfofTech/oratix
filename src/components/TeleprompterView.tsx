@@ -263,69 +263,15 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     prevLangRef.current = voiceLang;
   }, [voiceLang, voiceActive, startVoice]);
 
-  // Camera recording
-  const startRecording = useCallback(async () => {
+  // Camera: open/close separately from recording
+  const openCamera = useCallback(async () => {
     try {
-      chunksRef.current = [];
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
       });
       setCameraStream(stream);
       if (videoRef.current) videoRef.current.srcObject = stream;
-
-      const mimeType = MediaRecorder.isTypeSupported("video/mp4")
-        ? "video/mp4"
-        : MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-        ? "video/webm;codecs=vp9,opus"
-        : MediaRecorder.isTypeSupported("video/webm")
-        ? "video/webm"
-        : "";
-
-      if (!mimeType) {
-        toast.error(t("recordingError"));
-        stream.getTracks().forEach((track) => track.stop());
-        setCameraStream(null);
-        return;
-      }
-
-      const recorder = new MediaRecorder(stream, { mimeType });
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = () => {
-        toast.info(t("saving") || "Saving...");
-        setTimeout(() => {
-          const chunks = chunksRef.current;
-          chunksRef.current = [];
-          if (chunks.length === 0) {
-            toast.error(t("recordingError"));
-            stream.getTracks().forEach((track) => track.stop());
-            setCameraStream(null);
-            return;
-          }
-          const blob = new Blob(chunks, { type: mimeType });
-          stream.getTracks().forEach((track) => track.stop());
-          setCameraStream(null);
-          if (blob.size === 0) { toast.error(t("recordingError")); return; }
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.style.display = "none";
-          a.href = url;
-          const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-          a.download = `teleprompt-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.${ext}`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-          toast.success(t("recordingSaved"));
-        }, 300);
-      };
-
-      mediaRecorderRef.current = recorder;
-      recorder.start(500);
-      setIsRecording(true);
     } catch (err) {
       console.error("Camera error:", err);
       if (err instanceof Error && err.name === "NotAllowedError") {
@@ -333,9 +279,68 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       } else {
         toast.error(t("recordingError"));
       }
-      setIsRecording(false);
     }
   }, [t]);
+
+  const closeCamera = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
+    }
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+    }
+    setCameraStream(null);
+    setIsRecording(false);
+  }, [cameraStream]);
+
+  const startRecording = useCallback(() => {
+    if (!cameraStream) return;
+    chunksRef.current = [];
+
+    const mimeType = MediaRecorder.isTypeSupported("video/mp4")
+      ? "video/mp4"
+      : MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+      ? "video/webm;codecs=vp9,opus"
+      : MediaRecorder.isTypeSupported("video/webm")
+      ? "video/webm"
+      : "";
+
+    if (!mimeType) {
+      toast.error(t("recordingError"));
+      return;
+    }
+
+    const recorder = new MediaRecorder(cameraStream, { mimeType });
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      toast.info(t("saving") || "Se salvează...");
+      setTimeout(() => {
+        const chunks = chunksRef.current;
+        chunksRef.current = [];
+        if (chunks.length === 0) { toast.error(t("recordingError")); return; }
+        const blob = new Blob(chunks, { type: mimeType });
+        if (blob.size === 0) { toast.error(t("recordingError")); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+        a.download = `teleprompt-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast.success(t("recordingSaved"));
+      }, 300);
+    };
+
+    mediaRecorderRef.current = recorder;
+    recorder.start(500);
+    setIsRecording(true);
+  }, [cameraStream, t]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -361,9 +366,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   }, [countdown]);
 
   const startRecordAndScroll = useCallback(async () => {
-    await startRecording();
+    if (!cameraStream) await openCamera();
+    startRecording();
     startPlayWithCountdown();
-  }, [startRecording, startPlayWithCountdown]);
+  }, [cameraStream, openCamera, startRecording, startPlayWithCountdown]);
 
   // Cleanup camera on unmount
   useEffect(() => {
@@ -461,21 +467,29 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             >
               {voiceLang === "en-US" ? "🇬🇧 EN" : "🇷🇴 RO"}
             </button>
-            {!isRecording ? (
+            {!cameraStream ? (
+              <button
+                onClick={openCamera}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary/80 text-foreground hover:text-primary transition-colors"
+              >
+                <Video className="w-4 h-4" />
+                {t("openCamera")}
+              </button>
+            ) : !isRecording ? (
               <>
                 <button
                   onClick={startRecording}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary/80 text-foreground hover:text-primary transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive text-destructive-foreground hover:opacity-90 transition-colors"
                 >
                   <Video className="w-4 h-4" />
-                  {t("record")}
+                  {t("startRecording")}
                 </button>
                 <button
-                  onClick={startRecordAndScroll}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 transition-colors"
+                  onClick={closeCamera}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-secondary/80 text-foreground hover:text-primary transition-colors"
                 >
-                  <Video className="w-4 h-4" />
-                  {t("startRecordAndScroll")}
+                  <VideoOff className="w-4 h-4" />
+                  {t("closeCamera")}
                 </button>
               </>
             ) : (
@@ -498,8 +512,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {cameraStream && cameraVisible && (
         <div
           onClick={(e) => { e.stopPropagation(); setCameraVisible(false); }}
-          className="fixed top-3 right-3 z-20 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg cursor-pointer"
-          style={{ width: 120, height: 160 }}
+          className="fixed top-3 right-3 z-20 rounded-xl overflow-hidden border-2 border-primary/30 shadow-xl cursor-pointer w-40 h-[213px] sm:w-64 sm:h-[341px]"
           title={t("togglePreview") || "Hide preview"}
         >
           <video

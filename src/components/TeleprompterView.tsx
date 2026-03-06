@@ -23,6 +23,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(true);
   const [cameraMode, setCameraMode] = useState<"corner" | "fullscreen">("fullscreen");
+  const [isTouching, setIsTouching] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -37,6 +38,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
   useEffect(() => { playingRef.current = playing; }, [playing]);
+  const isTouchingRef = useRef(isTouching);
+  useEffect(() => { isTouchingRef.current = isTouching; }, [isTouching]);
 
   // Assign srcObject whenever cameraStream or visibility changes
   useEffect(() => {
@@ -82,7 +85,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     const scroll = (now: number) => {
       const delta = now - lastTime;
       lastTime = now;
-      if (scrollRef.current && playingRef.current) {
+      if (scrollRef.current && playingRef.current && !isTouchingRef.current) {
         const lineH = fontSizeRef.current * 1.5;
         const pxPerMs = (speedRef.current * lineH) / 2500;
         scrollRef.current.scrollTop += pxPerMs * delta;
@@ -98,8 +101,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
-      if (e.key === "ArrowUp") setSpeed((s) => Math.min(s + 0.5, 10));
-      if (e.key === "ArrowDown") setSpeed((s) => Math.max(s - 0.5, 1));
+      if (e.key === "ArrowUp") setSpeed((s) => Math.min(Math.round((s + 0.1) * 10) / 10, 10));
+      if (e.key === "ArrowDown") setSpeed((s) => Math.max(Math.round((s - 0.1) * 10) / 10, 0.5));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -112,9 +115,9 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (e.deltaY < 0) {
-        setSpeed((s) => Math.min(Math.round((s + 0.5) * 10) / 10, 10));
+        setSpeed((s) => Math.min(Math.round((s + 0.1) * 10) / 10, 10));
       } else {
-        setSpeed((s) => Math.max(Math.round((s - 0.5) * 10) / 10, 1));
+        setSpeed((s) => Math.max(Math.round((s - 0.1) * 10) / 10, 0.5));
       }
     };
     el.addEventListener("wheel", onWheel, { passive: false });
@@ -319,11 +322,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           {/* Speed slider */}
           <div className="flex items-center gap-3">
             <span className="uppercase tracking-wider text-[10px] font-mono text-muted-foreground/80 w-14 shrink-0">{t("speed")}</span>
-            <button onClick={() => setSpeed((s) => Math.max(s - 0.5, 1))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition">
+            <button onClick={() => setSpeed((s) => Math.max(Math.round((s - 0.1) * 10) / 10, 0.5))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition">
               <Minus className="w-3.5 h-3.5" />
             </button>
-            <Slider value={[speed]} onValueChange={([v]) => setSpeed(v)} min={1} max={10} step={0.5} className="flex-1" />
-            <button onClick={() => setSpeed((s) => Math.min(s + 0.5, 10))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition">
+            <Slider value={[speed]} onValueChange={([v]) => setSpeed(Math.round(v * 10) / 10)} min={0.5} max={10} step={0.1} className="flex-1" />
+            <button onClick={() => setSpeed((s) => Math.min(Math.round((s + 0.1) * 10) / 10, 10))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition">
               <Plus className="w-3.5 h-3.5" />
             </button>
             <span className="text-[10px] font-mono text-foreground/90 w-8 text-right">{speed}x</span>
@@ -431,9 +434,18 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       )}
 
       {/* Scrolling text */}
-      <div ref={scrollRef} className={`flex-1 overflow-hidden fade-mask relative z-[25] transition-opacity duration-300 ${isFraming ? "opacity-0 pointer-events-none" : "opacity-100"}`} style={{ scrollBehavior: 'auto' }}>
+      <div
+        ref={scrollRef}
+        className={`flex-1 overflow-hidden fade-mask relative z-[25] transition-opacity duration-300 ${isFraming ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+        style={{ scrollBehavior: 'auto' }}
+        onTouchStart={() => setIsTouching(true)}
+        onTouchEnd={() => setIsTouching(false)}
+        onMouseDown={() => setIsTouching(true)}
+        onMouseUp={() => setIsTouching(false)}
+        onMouseLeave={() => setIsTouching(false)}
+      >
         <div
-          className="max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[50vh]"
+          className="max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[100vh]"
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p

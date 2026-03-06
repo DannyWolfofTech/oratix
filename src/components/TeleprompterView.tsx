@@ -85,7 +85,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     const scroll = (now: number) => {
       const delta = now - lastTime;
       lastTime = now;
-      if (scrollRef.current && playingRef.current) {
+      if (scrollRef.current && playingRef.current && !isTouchingRef.current) {
         const lineH = fontSizeRef.current * 1.5;
         const pxPerMs = (speedRef.current * lineH) / 2500;
         scrollRef.current.scrollTop += pxPerMs * delta;

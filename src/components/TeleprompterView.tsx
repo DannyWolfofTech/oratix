@@ -101,8 +101,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
-      if (e.key === "ArrowUp") setSpeed((s) => Math.min(s + 0.5, 10));
-      if (e.key === "ArrowDown") setSpeed((s) => Math.max(s - 0.5, 1));
+      if (e.key === "ArrowUp") setSpeed((s) => Math.min(Math.round((s + 0.1) * 10) / 10, 10));
+      if (e.key === "ArrowDown") setSpeed((s) => Math.max(Math.round((s - 0.1) * 10) / 10, 0.5));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

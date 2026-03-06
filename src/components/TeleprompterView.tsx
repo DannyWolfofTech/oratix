@@ -126,7 +126,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     if (isMobile) return;
     setShowControls(true);
     clearTimeout(controlsTimeoutRef.current);
-    if (playing && cameraMode !== "fullscreen") {
+    if (playing) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false);
       }, 3000);

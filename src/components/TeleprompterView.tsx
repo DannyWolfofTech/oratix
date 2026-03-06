@@ -246,7 +246,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         toast.success(t("recordingSaved"));
-      }, 300);
+      }, 1000);
     };
 
     mediaRecorderRef.current = recorder;

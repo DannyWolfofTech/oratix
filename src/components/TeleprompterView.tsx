@@ -143,14 +143,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   };
 
   useEffect(() => {
-    if (playing && cameraMode !== "fullscreen") {
+    if (playing) {
       const delay = isMobile ? 0 : 3000;
       controlsTimeoutRef.current = setTimeout(() => setShowControls(false), delay);
     } else {
       setShowControls(true);
     }
     return () => clearTimeout(controlsTimeoutRef.current);
-  }, [playing, isMobile, cameraMode]);
+  }, [playing, isMobile]);
 
   // Camera: open/close separately from recording
   const openCamera = useCallback(async () => {

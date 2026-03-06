@@ -135,6 +135,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   const handleTap = () => {
     if (!isMobile) return;
+    if (cameraMode === "fullscreen" && !playing && !isRecording) {
+      setShowControls(true);
+      return;
+    }
     setShowControls((prev) => !prev);
   };
 

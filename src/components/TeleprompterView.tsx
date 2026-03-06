@@ -115,9 +115,9 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (e.deltaY < 0) {
-        setSpeed((s) => Math.min(Math.round((s + 0.5) * 10) / 10, 10));
+        setSpeed((s) => Math.min(Math.round((s + 0.1) * 10) / 10, 10));
       } else {
-        setSpeed((s) => Math.max(Math.round((s - 0.5) * 10) / 10, 1));
+        setSpeed((s) => Math.max(Math.round((s - 0.1) * 10) / 10, 0.5));
       }
     };
     el.addEventListener("wheel", onWheel, { passive: false });

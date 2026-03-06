@@ -384,7 +384,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {/* Camera preview - fullscreen or corner based on cameraMode */}
       {cameraStream && cameraVisible && (
         <div
-          onClick={() => { if (cameraMode === "fullscreen") handleTap(); else setCameraVisible(false); }}
+          onClick={(e) => { e.stopPropagation(); if (cameraMode === "fullscreen") handleTap(); else setCameraVisible(false); }}
           className={`fixed overflow-hidden shadow-2xl transition-all duration-500 ease-in-out ${
             cameraMode === "fullscreen"
               ? "inset-0 z-[10] w-full h-full bg-black rounded-none border-none"

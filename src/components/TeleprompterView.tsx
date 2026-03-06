@@ -434,9 +434,18 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       )}
 
       {/* Scrolling text */}
-      <div ref={scrollRef} className={`flex-1 overflow-hidden fade-mask relative z-[25] transition-opacity duration-300 ${isFraming ? "opacity-0 pointer-events-none" : "opacity-100"}`} style={{ scrollBehavior: 'auto' }}>
+      <div
+        ref={scrollRef}
+        className={`flex-1 overflow-hidden fade-mask relative z-[25] transition-opacity duration-300 ${isFraming ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+        style={{ scrollBehavior: 'auto' }}
+        onTouchStart={() => setIsTouching(true)}
+        onTouchEnd={() => setIsTouching(false)}
+        onMouseDown={() => setIsTouching(true)}
+        onMouseUp={() => setIsTouching(false)}
+        onMouseLeave={() => setIsTouching(false)}
+      >
         <div
-          className="max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[50vh]"
+          className="max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[100vh]"
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p

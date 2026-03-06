@@ -322,11 +322,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           {/* Speed slider */}
           <div className="flex items-center gap-3">
             <span className="uppercase tracking-wider text-[10px] font-mono text-muted-foreground/80 w-14 shrink-0">{t("speed")}</span>
-            <button onClick={() => setSpeed((s) => Math.max(s - 0.5, 1))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition">
+            <button onClick={() => setSpeed((s) => Math.max(Math.round((s - 0.1) * 10) / 10, 0.5))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition">
               <Minus className="w-3.5 h-3.5" />
             </button>
-            <Slider value={[speed]} onValueChange={([v]) => setSpeed(v)} min={1} max={10} step={0.5} className="flex-1" />
-            <button onClick={() => setSpeed((s) => Math.min(s + 0.5, 10))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition">
+            <Slider value={[speed]} onValueChange={([v]) => setSpeed(Math.round(v * 10) / 10)} min={0.5} max={10} step={0.1} className="flex-1" />
+            <button onClick={() => setSpeed((s) => Math.min(Math.round((s + 0.1) * 10) / 10, 10))} className="p-1.5 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition">
               <Plus className="w-3.5 h-3.5" />
             </button>
             <span className="text-[10px] font-mono text-foreground/90 w-8 text-right">{speed}x</span>

@@ -246,11 +246,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         toast.success(t("recordingSaved"));
-      }, 300);
+      }, 1000);
     };
 
     mediaRecorderRef.current = recorder;
-    recorder.start(500);
+    recorder.start();
     setIsRecording(true);
     startPlayWithCountdown();
   }, [cameraStream, t, startPlayWithCountdown]);

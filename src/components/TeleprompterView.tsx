@@ -445,7 +445,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         onMouseLeave={() => setIsTouching(false)}
       >
         <div
-          className="max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[100vh]"
+          className="max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[120vh]"
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p

@@ -282,6 +282,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     >
       {/* Controls overlay */}
       <div
+        onClick={(e) => e.stopPropagation()}
         className={`fixed top-0 left-0 right-0 z-[100] p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}

@@ -126,9 +126,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     if (isMobile) return;
     setShowControls(true);
     clearTimeout(controlsTimeoutRef.current);
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (playing) setShowControls(false);
-    }, 3000);
+    if (playing && cameraMode !== "fullscreen") {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
+    }
   };
 
   const handleTap = () => {

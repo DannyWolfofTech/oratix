@@ -135,6 +135,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   const handleTap = () => {
     if (!isMobile) return;
+    if (cameraMode === "fullscreen" && !playing && !isRecording) {
+      setShowControls(true);
+      return;
+    }
     setShowControls((prev) => !prev);
   };
 
@@ -278,6 +282,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     >
       {/* Controls overlay */}
       <div
+        onClick={(e) => e.stopPropagation()}
         className={`fixed top-0 left-0 right-0 z-[100] p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
@@ -379,7 +384,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {/* Camera preview - fullscreen or corner based on cameraMode */}
       {cameraStream && cameraVisible && (
         <div
-          onClick={() => { if (cameraMode === "fullscreen") handleTap(); else setCameraVisible(false); }}
+          onClick={(e) => { e.stopPropagation(); if (cameraMode === "fullscreen") handleTap(); else setCameraVisible(false); }}
           className={`fixed overflow-hidden shadow-2xl transition-all duration-500 ease-in-out ${
             cameraMode === "fullscreen"
               ? "inset-0 z-[10] w-full h-full bg-black rounded-none border-none"

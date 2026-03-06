@@ -250,7 +250,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     };
 
     mediaRecorderRef.current = recorder;
-    recorder.start(500);
+    recorder.start();
     setIsRecording(true);
     startPlayWithCountdown();
   }, [cameraStream, t, startPlayWithCountdown]);

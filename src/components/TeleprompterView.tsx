@@ -38,6 +38,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
   useEffect(() => { playingRef.current = playing; }, [playing]);
+  const isTouchingRef = useRef(isTouching);
+  useEffect(() => { isTouchingRef.current = isTouching; }, [isTouching]);
 
   // Assign srcObject whenever cameraStream or visibility changes
   useEffect(() => {

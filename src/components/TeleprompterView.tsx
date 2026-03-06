@@ -124,6 +124,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   // Auto-hide controls
   const handleMouseMove = () => {
     if (isMobile) return;
+    if (countdown !== null) return;
     setShowControls(true);
     clearTimeout(controlsTimeoutRef.current);
     if (playing) {
@@ -135,6 +136,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   const handleTap = () => {
     if (!isMobile) return;
+    if (countdown !== null) return;
     if (cameraMode === "fullscreen" && !playing && !isRecording) {
       setShowControls(true);
       return;
@@ -143,14 +145,16 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   };
 
   useEffect(() => {
-    if (playing) {
+    if (countdown !== null) {
+      setShowControls(false);
+    } else if (playing) {
       const delay = isMobile ? 0 : 3000;
       controlsTimeoutRef.current = setTimeout(() => setShowControls(false), delay);
     } else {
       setShowControls(true);
     }
     return () => clearTimeout(controlsTimeoutRef.current);
-  }, [playing, isMobile]);
+  }, [playing, isMobile, countdown]);
 
   // Camera: open/close separately from recording
   const openCamera = useCallback(async () => {

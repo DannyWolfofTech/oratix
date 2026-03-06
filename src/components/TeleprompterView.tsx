@@ -126,9 +126,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     if (isMobile) return;
     setShowControls(true);
     clearTimeout(controlsTimeoutRef.current);
-    controlsTimeoutRef.current = setTimeout(() => {
-      if (playing) setShowControls(false);
-    }, 3000);
+    if (playing && cameraMode !== "fullscreen") {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
+    }
   };
 
   const handleTap = () => {
@@ -137,14 +139,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   };
 
   useEffect(() => {
-    if (playing) {
+    if (playing && cameraMode !== "fullscreen") {
       const delay = isMobile ? 0 : 3000;
       controlsTimeoutRef.current = setTimeout(() => setShowControls(false), delay);
     } else {
       setShowControls(true);
     }
     return () => clearTimeout(controlsTimeoutRef.current);
-  }, [playing, isMobile]);
+  }, [playing, isMobile, cameraMode]);
 
   // Camera: open/close separately from recording
   const openCamera = useCallback(async () => {
@@ -276,7 +278,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     >
       {/* Controls overlay */}
       <div
-        className={`absolute top-0 left-0 right-0 z-[60] p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
+        className={`fixed top-0 left-0 right-0 z-[100] p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
@@ -377,7 +379,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {/* Camera preview - fullscreen or corner based on cameraMode */}
       {cameraStream && cameraVisible && (
         <div
-          onClick={(e) => { e.stopPropagation(); if (cameraMode === "corner") setCameraVisible(false); }}
+          onClick={() => { if (cameraMode === "fullscreen") handleTap(); else setCameraVisible(false); }}
           className={`fixed overflow-hidden shadow-2xl transition-all duration-500 ease-in-out ${
             cameraMode === "fullscreen"
               ? "inset-0 z-[10] w-full h-full bg-black rounded-none border-none"

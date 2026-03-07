@@ -241,13 +241,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         a.href = url;
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
         const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-        a.download = `Oratix_Video_${timestamp}.${ext}`;
+        a.download = `TelePrompt_Recording_${timestamp}.${ext}`;
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-        }, 100);
+        }, 150);
         toast.success(t("recordingSaved"));
       }, 1000);
     };

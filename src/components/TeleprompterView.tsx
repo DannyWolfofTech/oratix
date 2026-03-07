@@ -284,6 +284,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const isFullscreenCamera = !!(cameraStream && cameraMode === "fullscreen");
   const isFraming = !!(cameraStream && !isRecording && !playing && countdown === null && cameraMode === "fullscreen");
 
+  // Warn users in Facebook/Messenger in-app browsers
+  useEffect(() => {
+    const ua = navigator.userAgent || "";
+    if (/FBAN|FBAV/i.test(ua)) {
+      toast.warning(t("inAppBrowserWarning"), { duration: 10000 });
+    }
+  }, [t]);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-teleprompter-bg flex flex-col"

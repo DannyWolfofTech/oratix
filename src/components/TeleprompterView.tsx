@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Minus, Plus, Pause, Play, Video, VideoOff, ArrowUp, EyeOff, Maximize, Minimize } from "lucide-react";
+import { X, Minus, Plus, Pause, Play, Video, VideoOff, ArrowUp, EyeOff, Maximize, Minimize, Palette } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
@@ -24,6 +24,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [cameraVisible, setCameraVisible] = useState(true);
   const [cameraMode, setCameraMode] = useState<"corner" | "fullscreen">("fullscreen");
   const [isTouching, setIsTouching] = useState(false);
+  const [textColor, setTextColor] = useState<"white" | "red" | "blue">("white");
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -352,6 +353,38 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             <span className="text-[10px] font-mono text-foreground/90 w-8 text-right">{fontSize}px</span>
           </div>
 
+          {/* Text color picker */}
+          <div className="flex items-center gap-3">
+            <span className="uppercase tracking-wider text-[10px] font-mono text-muted-foreground/80 w-14 shrink-0 flex items-center gap-1">
+              <Palette className="w-3 h-3" />
+              {t("textColor")}
+            </span>
+            <div className="flex items-center gap-2">
+              {([
+                { key: "white" as const, label: "colorWhite", color: "hsl(0 0% 100%)" },
+                { key: "red" as const, label: "colorRed", color: "hsl(0 85% 60%)" },
+                { key: "blue" as const, label: "colorBlue", color: "hsl(200 95% 60%)" },
+              ] as const).map(({ key, label, color }) => (
+                <button
+                  key={key}
+                  onClick={() => setTextColor(key)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${
+                    textColor === key
+                      ? "bg-foreground text-background ring-2 ring-foreground/50 scale-105"
+                      : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground"
+                  }`}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full border border-white/20 shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  {t(label)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+
           {/* Recording controls */}
           <div className="flex items-center gap-2 flex-wrap">
             {!cameraStream ? (
@@ -460,11 +493,16 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p
-            className="text-teleprompter-text font-sans font-medium whitespace-pre-wrap"
+            className="font-sans font-medium whitespace-pre-wrap"
             style={{
+              color: textColor === "red"
+                ? "hsl(0 85% 60%)"
+                : textColor === "blue"
+                ? "hsl(200 95% 60%)"
+                : "hsl(0 0% 100%)",
               textShadow: isFullscreenCamera
-                ? "0 2px 8px rgba(0,0,0,1), 0 0px 20px rgba(0,0,0,0.8), 0 0px 3px #EAB308, 0 0px 1px #EAB308"
-                : "0 1px 4px rgba(0,0,0,0.5)",
+                ? `0 2px 8px rgba(0,0,0,1), 0 0px 20px rgba(0,0,0,0.8), 0 0 4px rgba(0,0,0,0.9)`
+                : "0 2px 6px rgba(0,0,0,0.7), 0 0 2px rgba(0,0,0,0.5)",
             }}
           >
             {content}

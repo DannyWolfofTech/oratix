@@ -73,6 +73,10 @@ const translations = {
   cornerView: "Colț",
   fullscreenView: "Ecran complet",
   inAppBrowserWarning: "Browserul Facebook/Messenger poate bloca salvarea video. Te rugăm să deschizi în Chrome sau Safari pentru cea mai bună experiență.",
+  textColor: "Culoare",
+  colorWhite: "Alb",
+  colorRed: "Roșu",
+  colorBlue: "Albastru",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

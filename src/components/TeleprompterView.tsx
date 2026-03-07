@@ -493,11 +493,16 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p
-            className="text-teleprompter-text font-sans font-medium whitespace-pre-wrap"
+            className="font-sans font-medium whitespace-pre-wrap"
             style={{
+              color: textColor === "red"
+                ? "hsl(0 85% 60%)"
+                : textColor === "blue"
+                ? "hsl(200 95% 60%)"
+                : "hsl(0 0% 100%)",
               textShadow: isFullscreenCamera
-                ? "0 2px 8px rgba(0,0,0,1), 0 0px 20px rgba(0,0,0,0.8), 0 0px 3px #EAB308, 0 0px 1px #EAB308"
-                : "0 1px 4px rgba(0,0,0,0.5)",
+                ? `0 2px 8px rgba(0,0,0,1), 0 0px 20px rgba(0,0,0,0.8), 0 0 4px rgba(0,0,0,0.9)`
+                : "0 2px 6px rgba(0,0,0,0.7), 0 0 2px rgba(0,0,0,0.5)",
             }}
           >
             {content}

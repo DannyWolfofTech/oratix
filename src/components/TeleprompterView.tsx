@@ -456,15 +456,15 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         onMouseLeave={() => setIsTouching(false)}
       >
         <div
-          className="max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[120vh]"
+          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[120vh] ${isFullscreenCamera ? "bg-black/40 backdrop-blur-sm rounded-2xl" : ""}`}
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p
             className="text-teleprompter-text font-sans font-medium whitespace-pre-wrap"
             style={{
               textShadow: isFullscreenCamera
-                ? "0px 0px 10px rgba(0,0,0,0.9), 0px 0px 3px #EAB308, 0px 0px 1px #EAB308"
-                : "none",
+                ? "0 2px 8px rgba(0,0,0,1), 0 0px 20px rgba(0,0,0,0.8), 0 0px 3px #EAB308, 0 0px 1px #EAB308"
+                : "0 1px 4px rgba(0,0,0,0.5)",
             }}
           >
             {content}

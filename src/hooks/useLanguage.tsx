@@ -72,6 +72,7 @@ const translations = {
   startRecording: "Începe Înregistrarea",
   cornerView: "Colț",
   fullscreenView: "Ecran complet",
+  inAppBrowserWarning: "Browserul Facebook/Messenger poate bloca salvarea video. Te rugăm să deschizi în Chrome sau Safari pentru cea mai bună experiență.",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

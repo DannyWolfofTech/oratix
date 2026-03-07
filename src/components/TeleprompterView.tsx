@@ -241,13 +241,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         a.href = url;
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
         const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-        a.download = `Oratix_Video_${timestamp}.${ext}`;
+        a.download = `TelePrompt_Recording_${timestamp}.${ext}`;
         document.body.appendChild(a);
         a.click();
         setTimeout(() => {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-        }, 100);
+        }, 150);
         toast.success(t("recordingSaved"));
       }, 1000);
     };
@@ -283,6 +283,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   const isFullscreenCamera = !!(cameraStream && cameraMode === "fullscreen");
   const isFraming = !!(cameraStream && !isRecording && !playing && countdown === null && cameraMode === "fullscreen");
+
+  // Warn users in Facebook/Messenger in-app browsers
+  useEffect(() => {
+    const ua = navigator.userAgent || "";
+    if (/FBAN|FBAV/i.test(ua)) {
+      toast.warning(t("inAppBrowserWarning"), { duration: 10000 });
+    }
+  }, [t]);
 
   return (
     <div
@@ -448,15 +456,15 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         onMouseLeave={() => setIsTouching(false)}
       >
         <div
-          className="max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[120vh]"
+          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[120vh] ${isFullscreenCamera ? "bg-black/40 backdrop-blur-sm rounded-2xl" : ""}`}
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p
             className="text-teleprompter-text font-sans font-medium whitespace-pre-wrap"
             style={{
               textShadow: isFullscreenCamera
-                ? "0px 0px 10px rgba(0,0,0,0.9), 0px 0px 3px #EAB308, 0px 0px 1px #EAB308"
-                : "none",
+                ? "0 2px 8px rgba(0,0,0,1), 0 0px 20px rgba(0,0,0,0.8), 0 0px 3px #EAB308, 0 0px 1px #EAB308"
+                : "0 1px 4px rgba(0,0,0,0.5)",
             }}
           >
             {content}

@@ -228,7 +228,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     };
 
     recorder.onstop = () => {
-      toast.info(t("saving") || "Se salvează...");
+      toast.info(t("saving"));
       setTimeout(() => {
         const chunks = chunksRef.current;
         chunksRef.current = [];
@@ -239,12 +239,15 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         const a = document.createElement("a");
         a.style.display = "none";
         a.href = url;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
         const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-        a.download = `teleprompt-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.${ext}`;
+        a.download = `Oratix_Video_${timestamp}.${ext}`;
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
         toast.success(t("recordingSaved"));
       }, 1000);
     };

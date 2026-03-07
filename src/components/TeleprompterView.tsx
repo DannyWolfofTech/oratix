@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Minus, Plus, Pause, Play, Video, VideoOff, ArrowUp, EyeOff, Maximize, Minimize } from "lucide-react";
+import { X, Minus, Plus, Pause, Play, Video, VideoOff, ArrowUp, EyeOff, Maximize, Minimize, Palette } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";

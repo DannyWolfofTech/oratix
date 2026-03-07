@@ -353,6 +353,38 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             <span className="text-[10px] font-mono text-foreground/90 w-8 text-right">{fontSize}px</span>
           </div>
 
+          {/* Text color picker */}
+          <div className="flex items-center gap-3">
+            <span className="uppercase tracking-wider text-[10px] font-mono text-muted-foreground/80 w-14 shrink-0 flex items-center gap-1">
+              <Palette className="w-3 h-3" />
+              {t("textColor")}
+            </span>
+            <div className="flex items-center gap-2">
+              {([
+                { key: "white" as const, label: "colorWhite", color: "hsl(0 0% 100%)" },
+                { key: "red" as const, label: "colorRed", color: "hsl(0 85% 60%)" },
+                { key: "blue" as const, label: "colorBlue", color: "hsl(200 95% 60%)" },
+              ] as const).map(({ key, label, color }) => (
+                <button
+                  key={key}
+                  onClick={() => setTextColor(key)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${
+                    textColor === key
+                      ? "bg-foreground text-background ring-2 ring-foreground/50 scale-105"
+                      : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground"
+                  }`}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full border border-white/20 shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  {t(label)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+
           {/* Recording controls */}
           <div className="flex items-center gap-2 flex-wrap">
             {!cameraStream ? (

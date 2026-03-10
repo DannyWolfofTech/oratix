@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
+import ReviewRecordingModal from "@/components/ReviewRecordingModal";
 
 interface TeleprompterViewProps {
   content: string;
@@ -25,6 +26,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [cameraMode, setCameraMode] = useState<"corner" | "fullscreen">("fullscreen");
   const [isTouching, setIsTouching] = useState(false);
   const [textColor, setTextColor] = useState<"white" | "red" | "blue">("white");
+  const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
+  const [reviewMime, setReviewMime] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -229,59 +232,17 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     };
 
     recorder.onstop = () => {
-      toast.info(t("saving"));
-      setTimeout(async () => {
-        const chunks = chunksRef.current;
-        chunksRef.current = [];
-        if (chunks.length === 0) { toast.error(t("recordingError")); return; }
-        const blob = new Blob(chunks, { type: mimeType });
-        if (blob.size === 0) { toast.error(t("recordingError")); return; }
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-        const fileName = `TelePrompt_Recording_${timestamp}.${ext}`;
-
-        // Strategy 1: Use native share/save (works reliably on mobile)
-        if (navigator.share && navigator.canShare) {
-          try {
-            const file = new File([blob], fileName, { type: mimeType });
-            if (navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                files: [file],
-                title: "TelePrompt Recording",
-              });
-              toast.success(t("recordingSaved"));
-              return;
-            }
-          } catch (err: any) {
-            // User cancelled share — fall through to download
-            if (err?.name === "AbortError") {
-              toast.info(t("shareCancelled"));
-              // Still fall through to offer download
-            }
-          }
-        }
-
-        // Strategy 2: Anchor download fallback
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.style.display = "none";
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-
-        // Give mobile browsers more time before cleanup
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 5000);
-
-        toast.success(t("recordingSavedCheck"), { duration: 8000 });
-      }, 500);
+      const chunks = chunksRef.current;
+      chunksRef.current = [];
+      if (chunks.length === 0) { toast.error(t("recordingError")); return; }
+      const blob = new Blob(chunks, { type: mimeType });
+      if (blob.size === 0) { toast.error(t("recordingError")); return; }
+      setReviewBlob(blob);
+      setReviewMime(mimeType);
     };
 
     mediaRecorderRef.current = recorder;
-    recorder.start();
+    recorder.start(1000); // 1-second timeslice for crash safety
     setIsRecording(true);
     startPlayWithCountdown();
   }, [cameraStream, t, startPlayWithCountdown]);
@@ -556,6 +517,15 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           {isMobile ? t("mobileHint") : t("desktopHint")}
         </p>
       </div>
+
+      {/* Review Recording Modal */}
+      {reviewBlob && (
+        <ReviewRecordingModal
+          blob={reviewBlob}
+          mimeType={reviewMime}
+          onClose={() => { setReviewBlob(null); setReviewMime(""); }}
+        />
+      )}
     </div>
   );
 };

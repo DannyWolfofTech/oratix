@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
+import ReviewRecordingModal from "@/components/ReviewRecordingModal";
 
 interface TeleprompterViewProps {
   content: string;

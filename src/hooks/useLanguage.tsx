@@ -79,6 +79,11 @@ const translations = {
   colorWhite: "Alb",
   colorRed: "Roșu",
   colorBlue: "Albastru",
+  reviewTitle: "Previzualizare Înregistrare",
+  saveToDevice: "Salvează pe Dispozitiv",
+  discardRecording: "Renunță la Înregistrare",
+  reviewSaveSuccess: "Salvat! Verifică în Descărcări sau Galerie. Pe iPhone: Partajare > Salvează Video.",
+  reviewSaveHint: "Pe iPhone, apasă Partajare apoi 'Salvează Video'. Pe Android, verifică folderul Descărcări sau Galeria.",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

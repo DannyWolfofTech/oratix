@@ -26,6 +26,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [cameraMode, setCameraMode] = useState<"corner" | "fullscreen">("fullscreen");
   const [isTouching, setIsTouching] = useState(false);
   const [textColor, setTextColor] = useState<"white" | "red" | "blue">("white");
+  const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
+  const [reviewMime, setReviewMime] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();

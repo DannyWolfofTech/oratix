@@ -517,6 +517,15 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           {isMobile ? t("mobileHint") : t("desktopHint")}
         </p>
       </div>
+
+      {/* Review Recording Modal */}
+      {reviewBlob && (
+        <ReviewRecordingModal
+          blob={reviewBlob}
+          mimeType={reviewMime}
+          onClose={() => { setReviewBlob(null); setReviewMime(""); }}
+        />
+      )}
     </div>
   );
 };

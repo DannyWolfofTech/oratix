@@ -320,7 +320,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               </button>
             </div>
             <button
-              onClick={onClose}
+              onClick={() => {
+                // Don't close teleprompter while review modal is open
+                if (reviewBlob) return;
+                onClose();
+              }}
               className="p-3 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-destructive transition"
             >
               <X className="w-5 h-5" />

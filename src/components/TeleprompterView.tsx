@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
+import fixWebmDuration from "fix-webm-duration";
 import ReviewRecordingModal from "@/components/ReviewRecordingModal";
 
 interface TeleprompterViewProps {
@@ -37,6 +38,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const recordingStartRef = useRef<number>(0);
 
   // Keep refs in sync
   useEffect(() => { speedRef.current = speed; }, [speed]);
@@ -260,18 +262,31 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       const chunks = chunksRef.current;
       chunksRef.current = [];
       if (chunks.length === 0) { toast.error(t("recordingError")); return; }
-      const blob = new Blob(chunks, { type: mimeType });
-      if (blob.size === 0) { toast.error(t("recordingError")); return; }
-      // Persist to IndexedDB BEFORE setting state (safety net)
-      try {
-        const { storeBlob } = await import("@/components/ReviewRecordingModal");
-        await storeBlob(blob, mimeType);
-      } catch { /* best effort */ }
-      setReviewBlob(blob);
-      setReviewMime(mimeType);
+      const rawBlob = new Blob(chunks, { type: mimeType });
+      if (rawBlob.size === 0) { toast.error(t("recordingError")); return; }
+
+      const duration = Date.now() - recordingStartRef.current;
+
+      const finalize = async (blob: Blob) => {
+        try {
+          const { storeBlob } = await import("@/components/ReviewRecordingModal");
+          await storeBlob(blob, mimeType);
+        } catch { /* best effort */ }
+        setReviewBlob(blob);
+        setReviewMime(mimeType);
+      };
+
+      if (mimeType.includes("webm") && duration > 0) {
+        fixWebmDuration(rawBlob, duration, (fixedBlob: Blob) => {
+          finalize(fixedBlob);
+        });
+      } else {
+        finalize(rawBlob);
+      }
     };
 
     mediaRecorderRef.current = recorder;
+    recordingStartRef.current = Date.now();
     recorder.start(1000); // 1-second timeslice for crash safety
     setIsRecording(true);
     startPlayWithCountdown();

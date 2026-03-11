@@ -135,8 +135,10 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
     }, 5000);
 
     toast.success(t("reviewSaveSuccess"), { duration: 10000 });
-    await clearBlob();
+    // Don't clear IndexedDB immediately — keep as backup until user dismisses
     setSaving(false);
+    // Close the modal after download is triggered
+    onClose();
   }, [activeBlob, activeMime, t, onClose]);
 
   const handleDiscard = useCallback(async () => {

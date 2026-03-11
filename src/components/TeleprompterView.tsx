@@ -251,12 +251,17 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
     };
 
-    recorder.onstop = () => {
+    recorder.onstop = async () => {
       const chunks = chunksRef.current;
       chunksRef.current = [];
       if (chunks.length === 0) { toast.error(t("recordingError")); return; }
       const blob = new Blob(chunks, { type: mimeType });
       if (blob.size === 0) { toast.error(t("recordingError")); return; }
+      // Persist to IndexedDB BEFORE setting state (safety net)
+      try {
+        const { storeBlob } = await import("@/components/ReviewRecordingModal");
+        await storeBlob(blob, mimeType);
+      } catch { /* best effort */ }
       setReviewBlob(blob);
       setReviewMime(mimeType);
     };

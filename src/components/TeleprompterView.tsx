@@ -173,6 +173,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   // Camera: open/close separately from recording
   const openCamera = useCallback(async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast.error(t("cameraNotAvailable"));
+      console.error("mediaDevices API not available – possibly blocked by Permissions-Policy or insecure context");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },

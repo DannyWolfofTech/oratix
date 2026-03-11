@@ -191,14 +191,26 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   }, [t]);
 
   const closeCamera = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      // Wait for onstop to fire before killing tracks
+      const origOnStop = recorder.onstop;
+      recorder.onstop = (ev) => {
+        if (origOnStop) origOnStop.call(recorder, ev);
+        if (cameraStream) {
+          cameraStream.getTracks().forEach((track) => track.stop());
+        }
+        setCameraStream(null);
+      };
+      try { recorder.stop(); } catch { /* ignore */ }
+      setIsRecording(false);
+    } else {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+      }
+      setCameraStream(null);
+      setIsRecording(false);
     }
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((track) => track.stop());
-    }
-    setCameraStream(null);
-    setIsRecording(false);
   }, [cameraStream]);
 
   // Countdown logic

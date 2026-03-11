@@ -286,6 +286,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     };
 
     mediaRecorderRef.current = recorder;
+    recordingStartRef.current = Date.now();
     recorder.start(1000); // 1-second timeslice for crash safety
     setIsRecording(true);
     startPlayWithCountdown();

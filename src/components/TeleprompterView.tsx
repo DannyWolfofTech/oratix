@@ -295,6 +295,21 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     };
   }, []);
 
+  // Recover orphaned recording from IndexedDB on mount
+  useEffect(() => {
+    const recover = async () => {
+      if (reviewBlob) return; // already have one
+      const { loadBlob } = await import("@/components/ReviewRecordingModal");
+      const stored = await loadBlob();
+      if (stored && stored.blob.size > 0) {
+        setReviewBlob(stored.blob);
+        setReviewMime(stored.mimeType);
+      }
+    };
+    recover();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isFullscreenCamera = !!(cameraStream && cameraMode === "fullscreen");
   const isFraming = !!(cameraStream && !isRecording && !playing && countdown === null && cameraMode === "fullscreen");
 

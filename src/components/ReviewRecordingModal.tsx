@@ -19,7 +19,7 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-async function storeBlob(blob: Blob, mimeType: string): Promise<void> {
+export async function storeBlob(blob: Blob, mimeType: string): Promise<void> {
   const db = await openDB();
   const tx = db.transaction(STORE_NAME, "readwrite");
   tx.objectStore(STORE_NAME).put({ blob, mimeType, timestamp: Date.now() }, DB_KEY);

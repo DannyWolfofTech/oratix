@@ -94,34 +94,17 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSave = useCallback(async () => {
-    if (!activeBlob) return;
-    setSaving(true);
-
+  const getFileName = useCallback(() => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const ext = activeMime.includes("mp4") ? "mp4" : "webm";
-    const fileName = `TelePrompt_Recording_${timestamp}.${ext}`;
+    return `TelePrompt_Recording_${timestamp}.${ext}`;
+  }, [activeMime]);
 
-    // Strategy 1: Native share (mobile)
-    if (navigator.share && navigator.canShare) {
-      try {
-        const file = new File([activeBlob], fileName, { type: activeMime });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "TelePrompt Recording" });
-          toast.success(t("recordingSaved"), { duration: 6000 });
-          await clearBlob();
-          setSaving(false);
-          onClose();
-          return;
-        }
-      } catch (err: any) {
-        if (err?.name === "AbortError") {
-          toast.info(t("shareCancelled"));
-        }
-      }
-    }
-
-    // Strategy 2: Anchor download
+  // Direct download to device
+  const handleDownload = useCallback(async () => {
+    if (!activeBlob) return;
+    setSaving(true);
+    const fileName = getFileName();
     const url = URL.createObjectURL(activeBlob);
     const a = document.createElement("a");
     a.style.display = "none";
@@ -133,13 +116,33 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }, 5000);
-
     toast.success(t("reviewSaveSuccess"), { duration: 10000 });
-    // Don't clear IndexedDB immediately — keep as backup until user dismisses
     setSaving(false);
-    // Close the modal after download is triggered
     onClose();
-  }, [activeBlob, activeMime, t, onClose]);
+  }, [activeBlob, getFileName, t, onClose]);
+
+  // Share to apps (Drive, etc.)
+  const handleSave = useCallback(async () => {
+    if (!activeBlob) return;
+    setSaving(true);
+    const fileName = getFileName();
+    try {
+      const file = new File([activeBlob], fileName, { type: activeMime });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "TelePrompt Recording" });
+        toast.success(t("recordingSaved"), { duration: 6000 });
+        await clearBlob();
+        setSaving(false);
+        onClose();
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        toast.info(t("shareCancelled"));
+      }
+    }
+    setSaving(false);
+  }, [activeBlob, activeMime, getFileName, t, onClose]);
 
   const handleDiscard = useCallback(async () => {
     await clearBlob();

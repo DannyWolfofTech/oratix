@@ -420,14 +420,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 <button
                   key={key}
                   onClick={() => setTextColor(key)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
                     textColor === key
                       ? "bg-foreground text-background ring-2 ring-foreground/50 scale-105"
                       : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground"
                   }`}
                 >
                   <span
-                    className="w-3 h-3 rounded-full border border-white/20 shrink-0"
+                    className="w-3.5 h-3.5 rounded-full border border-white/20 shrink-0"
                     style={{ backgroundColor: color }}
                   />
                   {t(label)}

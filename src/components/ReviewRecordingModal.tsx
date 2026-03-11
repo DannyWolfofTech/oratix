@@ -187,14 +187,27 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
 
         {/* Actions */}
         <div className="px-5 pb-5 flex flex-col gap-3">
+          {/* Direct download button */}
           <button
-            onClick={handleSave}
+            onClick={handleDownload}
             disabled={saving || !activeBlob}
             className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-base hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.98]"
           >
-            {isMobile ? <Share2 className="w-5 h-5" /> : <Download className="w-5 h-5" />}
-            {saving ? t("saving") : t("saveToDevice")}
+            <Download className="w-5 h-5" />
+            {t("downloadVideo")}
           </button>
+
+          {/* Share to apps (Drive, etc.) */}
+          {navigator.share && (
+            <button
+              onClick={handleSave}
+              disabled={saving || !activeBlob}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-secondary text-foreground font-medium text-sm hover:bg-secondary/80 border border-border disabled:opacity-50 transition-all active:scale-[0.98]"
+            >
+              <Share2 className="w-5 h-5" />
+              {saving ? t("saving") : t("shareVideo")}
+            </button>
+          )}
 
           <button
             onClick={handleDiscard}

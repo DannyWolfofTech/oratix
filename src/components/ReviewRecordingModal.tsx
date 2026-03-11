@@ -29,7 +29,7 @@ export async function storeBlob(blob: Blob, mimeType: string): Promise<void> {
   });
 }
 
-async function loadBlob(): Promise<{ blob: Blob; mimeType: string } | null> {
+export async function loadBlob(): Promise<{ blob: Blob; mimeType: string } | null> {
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readonly");

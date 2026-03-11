@@ -100,10 +100,18 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     return () => cancelAnimationFrame(animRef.current);
   }, []);
 
+  // Keep a ref to reviewBlob for close guards
+  const reviewBlobRef = useRef<Blob | null>(null);
+  useEffect(() => { reviewBlobRef.current = reviewBlob; }, [reviewBlob]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        // Don't close teleprompter while review modal is open
+        if (reviewBlobRef.current) return;
+        onClose();
+      }
       if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
       if (e.key === "ArrowUp") setSpeed((s) => Math.min(Math.round((s + 0.1) * 10) / 10, 10));
       if (e.key === "ArrowDown") setSpeed((s) => Math.max(Math.round((s - 0.1) * 10) / 10, 0.5));

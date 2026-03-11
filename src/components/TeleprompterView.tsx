@@ -262,15 +262,27 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       const chunks = chunksRef.current;
       chunksRef.current = [];
       if (chunks.length === 0) { toast.error(t("recordingError")); return; }
-      const blob = new Blob(chunks, { type: mimeType });
-      if (blob.size === 0) { toast.error(t("recordingError")); return; }
-      // Persist to IndexedDB BEFORE setting state (safety net)
-      try {
-        const { storeBlob } = await import("@/components/ReviewRecordingModal");
-        await storeBlob(blob, mimeType);
-      } catch { /* best effort */ }
-      setReviewBlob(blob);
-      setReviewMime(mimeType);
+      const rawBlob = new Blob(chunks, { type: mimeType });
+      if (rawBlob.size === 0) { toast.error(t("recordingError")); return; }
+
+      const duration = Date.now() - recordingStartRef.current;
+
+      const finalize = async (blob: Blob) => {
+        try {
+          const { storeBlob } = await import("@/components/ReviewRecordingModal");
+          await storeBlob(blob, mimeType);
+        } catch { /* best effort */ }
+        setReviewBlob(blob);
+        setReviewMime(mimeType);
+      };
+
+      if (mimeType.includes("webm") && duration > 0) {
+        fixWebmDuration(rawBlob, duration, (fixedBlob: Blob) => {
+          finalize(fixedBlob);
+        });
+      } else {
+        finalize(rawBlob);
+      }
     };
 
     mediaRecorderRef.current = recorder;

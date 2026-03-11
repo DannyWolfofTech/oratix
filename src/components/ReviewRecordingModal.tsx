@@ -19,7 +19,7 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-async function storeBlob(blob: Blob, mimeType: string): Promise<void> {
+export async function storeBlob(blob: Blob, mimeType: string): Promise<void> {
   const db = await openDB();
   const tx = db.transaction(STORE_NAME, "readwrite");
   tx.objectStore(STORE_NAME).put({ blob, mimeType, timestamp: Date.now() }, DB_KEY);
@@ -29,7 +29,7 @@ async function storeBlob(blob: Blob, mimeType: string): Promise<void> {
   });
 }
 
-async function loadBlob(): Promise<{ blob: Blob; mimeType: string } | null> {
+export async function loadBlob(): Promise<{ blob: Blob; mimeType: string } | null> {
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -135,8 +135,10 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
     }, 5000);
 
     toast.success(t("reviewSaveSuccess"), { duration: 10000 });
-    await clearBlob();
+    // Don't clear IndexedDB immediately — keep as backup until user dismisses
     setSaving(false);
+    // Close the modal after download is triggered
+    onClose();
   }, [activeBlob, activeMime, t, onClose]);
 
   const handleDiscard = useCallback(async () => {

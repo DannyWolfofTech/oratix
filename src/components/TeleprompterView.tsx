@@ -100,10 +100,18 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     return () => cancelAnimationFrame(animRef.current);
   }, []);
 
+  // Keep a ref to reviewBlob for close guards
+  const reviewBlobRef = useRef<Blob | null>(null);
+  useEffect(() => { reviewBlobRef.current = reviewBlob; }, [reviewBlob]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        // Don't close teleprompter while review modal is open
+        if (reviewBlobRef.current) return;
+        onClose();
+      }
       if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
       if (e.key === "ArrowUp") setSpeed((s) => Math.min(Math.round((s + 0.1) * 10) / 10, 10));
       if (e.key === "ArrowDown") setSpeed((s) => Math.max(Math.round((s - 0.1) * 10) / 10, 0.5));
@@ -183,14 +191,26 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   }, [t]);
 
   const closeCamera = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      // Wait for onstop to fire before killing tracks
+      const origOnStop = recorder.onstop;
+      recorder.onstop = (ev) => {
+        if (origOnStop) origOnStop.call(recorder, ev);
+        if (cameraStream) {
+          cameraStream.getTracks().forEach((track) => track.stop());
+        }
+        setCameraStream(null);
+      };
+      try { recorder.stop(); } catch { /* ignore */ }
+      setIsRecording(false);
+    } else {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+      }
+      setCameraStream(null);
+      setIsRecording(false);
     }
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((track) => track.stop());
-    }
-    setCameraStream(null);
-    setIsRecording(false);
   }, [cameraStream]);
 
   // Countdown logic
@@ -231,12 +251,17 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
     };
 
-    recorder.onstop = () => {
+    recorder.onstop = async () => {
       const chunks = chunksRef.current;
       chunksRef.current = [];
       if (chunks.length === 0) { toast.error(t("recordingError")); return; }
       const blob = new Blob(chunks, { type: mimeType });
       if (blob.size === 0) { toast.error(t("recordingError")); return; }
+      // Persist to IndexedDB BEFORE setting state (safety net)
+      try {
+        const { storeBlob } = await import("@/components/ReviewRecordingModal");
+        await storeBlob(blob, mimeType);
+      } catch { /* best effort */ }
       setReviewBlob(blob);
       setReviewMime(mimeType);
     };
@@ -268,6 +293,21 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
       }
     };
+  }, []);
+
+  // Recover orphaned recording from IndexedDB on mount
+  useEffect(() => {
+    const recover = async () => {
+      if (reviewBlob) return; // already have one
+      const { loadBlob } = await import("@/components/ReviewRecordingModal");
+      const stored = await loadBlob();
+      if (stored && stored.blob.size > 0) {
+        setReviewBlob(stored.blob);
+        setReviewMime(stored.mimeType);
+      }
+    };
+    recover();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isFullscreenCamera = !!(cameraStream && cameraMode === "fullscreen");
@@ -312,7 +352,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               </button>
             </div>
             <button
-              onClick={onClose}
+              onClick={() => {
+                // Don't close teleprompter while review modal is open
+                if (reviewBlob) return;
+                onClose();
+              }}
               className="p-3 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-destructive transition"
             >
               <X className="w-5 h-5" />

@@ -84,6 +84,8 @@ const translations = {
   discardRecording: "Renunță la Înregistrare",
   reviewSaveSuccess: "Salvat! Verifică în Descărcări sau Galerie. Pe iPhone: Partajare > Salvează Video.",
   reviewSaveHint: "Pe iPhone, apasă Partajare apoi 'Salvează Video'. Pe Android, verifică folderul Descărcări sau Galeria.",
+  downloadVideo: "Descarcă Video",
+  shareVideo: "Partajează",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

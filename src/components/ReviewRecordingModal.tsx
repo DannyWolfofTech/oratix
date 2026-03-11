@@ -94,34 +94,17 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSave = useCallback(async () => {
-    if (!activeBlob) return;
-    setSaving(true);
-
+  const getFileName = useCallback(() => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const ext = activeMime.includes("mp4") ? "mp4" : "webm";
-    const fileName = `TelePrompt_Recording_${timestamp}.${ext}`;
+    return `TelePrompt_Recording_${timestamp}.${ext}`;
+  }, [activeMime]);
 
-    // Strategy 1: Native share (mobile)
-    if (navigator.share && navigator.canShare) {
-      try {
-        const file = new File([activeBlob], fileName, { type: activeMime });
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "TelePrompt Recording" });
-          toast.success(t("recordingSaved"), { duration: 6000 });
-          await clearBlob();
-          setSaving(false);
-          onClose();
-          return;
-        }
-      } catch (err: any) {
-        if (err?.name === "AbortError") {
-          toast.info(t("shareCancelled"));
-        }
-      }
-    }
-
-    // Strategy 2: Anchor download
+  // Direct download to device
+  const handleDownload = useCallback(async () => {
+    if (!activeBlob) return;
+    setSaving(true);
+    const fileName = getFileName();
     const url = URL.createObjectURL(activeBlob);
     const a = document.createElement("a");
     a.style.display = "none";
@@ -133,13 +116,33 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }, 5000);
-
     toast.success(t("reviewSaveSuccess"), { duration: 10000 });
-    // Don't clear IndexedDB immediately — keep as backup until user dismisses
     setSaving(false);
-    // Close the modal after download is triggered
     onClose();
-  }, [activeBlob, activeMime, t, onClose]);
+  }, [activeBlob, getFileName, t, onClose]);
+
+  // Share to apps (Drive, etc.)
+  const handleSave = useCallback(async () => {
+    if (!activeBlob) return;
+    setSaving(true);
+    const fileName = getFileName();
+    try {
+      const file = new File([activeBlob], fileName, { type: activeMime });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "TelePrompt Recording" });
+        toast.success(t("recordingSaved"), { duration: 6000 });
+        await clearBlob();
+        setSaving(false);
+        onClose();
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        toast.info(t("shareCancelled"));
+      }
+    }
+    setSaving(false);
+  }, [activeBlob, activeMime, getFileName, t, onClose]);
 
   const handleDiscard = useCallback(async () => {
     await clearBlob();
@@ -187,14 +190,27 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
 
         {/* Actions */}
         <div className="px-5 pb-5 flex flex-col gap-3">
+          {/* Direct download button */}
           <button
-            onClick={handleSave}
+            onClick={handleDownload}
             disabled={saving || !activeBlob}
             className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold text-base hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-[0.98]"
           >
-            {isMobile ? <Share2 className="w-5 h-5" /> : <Download className="w-5 h-5" />}
-            {saving ? t("saving") : t("saveToDevice")}
+            <Download className="w-5 h-5" />
+            {t("downloadVideo")}
           </button>
+
+          {/* Share to apps (Drive, etc.) */}
+          {navigator.share && (
+            <button
+              onClick={handleSave}
+              disabled={saving || !activeBlob}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-secondary text-foreground font-medium text-sm hover:bg-secondary/80 border border-border disabled:opacity-50 transition-all active:scale-[0.98]"
+            >
+              <Share2 className="w-5 h-5" />
+              {saving ? t("saving") : t("shareVideo")}
+            </button>
+          )}
 
           <button
             onClick={handleDiscard}

@@ -528,7 +528,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             className="w-full h-full object-cover"
           />
           {isRecording && (
-            <div className="absolute top-1.5 left-1.5 w-3 h-3 rounded-full bg-destructive animate-pulse border border-destructive-foreground" />
+            <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <div className="w-3 h-3 rounded-full bg-destructive animate-pulse border border-destructive-foreground" />
+              <span className="text-sm font-mono font-semibold text-white tabular-nums">{formatTime(recordingElapsed)}</span>
+            </div>
           )}
         </div>
       )}

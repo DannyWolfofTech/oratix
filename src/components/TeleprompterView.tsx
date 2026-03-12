@@ -29,6 +29,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [textColor, setTextColor] = useState<"white" | "red" | "blue">("white");
   const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
   const [reviewMime, setReviewMime] = useState("");
+  const [recordingElapsed, setRecordingElapsed] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -330,6 +331,24 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Recording timer
+  useEffect(() => {
+    if (!isRecording) { setRecordingElapsed(0); return; }
+    const interval = setInterval(() => {
+      setRecordingElapsed(Math.floor((Date.now() - recordingStartRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isRecording]);
+
+  const formatTime = (totalSec: number) => {
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    const mm = String(m).padStart(2, "0");
+    const ss = String(s).padStart(2, "0");
+    return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  };
+
   const isFullscreenCamera = !!(cameraStream && cameraMode === "fullscreen");
   const isFraming = !!(cameraStream && !isRecording && !playing && countdown === null && cameraMode === "fullscreen");
 
@@ -509,7 +528,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             className="w-full h-full object-cover"
           />
           {isRecording && (
-            <div className="absolute top-1.5 left-1.5 w-3 h-3 rounded-full bg-destructive animate-pulse border border-destructive-foreground" />
+            <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <div className="w-3 h-3 rounded-full bg-destructive animate-pulse border border-destructive-foreground" />
+              <span className="text-sm font-mono font-semibold text-white tabular-nums">{formatTime(recordingElapsed)}</span>
+            </div>
           )}
         </div>
       )}

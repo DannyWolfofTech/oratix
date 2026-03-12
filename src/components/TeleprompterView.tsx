@@ -331,6 +331,24 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Recording timer
+  useEffect(() => {
+    if (!isRecording) { setRecordingElapsed(0); return; }
+    const interval = setInterval(() => {
+      setRecordingElapsed(Math.floor((Date.now() - recordingStartRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isRecording]);
+
+  const formatTime = (totalSec: number) => {
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    const mm = String(m).padStart(2, "0");
+    const ss = String(s).padStart(2, "0");
+    return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+  };
+
   const isFullscreenCamera = !!(cameraStream && cameraMode === "fullscreen");
   const isFraming = !!(cameraStream && !isRecording && !playing && countdown === null && cameraMode === "fullscreen");
 

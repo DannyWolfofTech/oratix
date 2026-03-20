@@ -38,6 +38,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [cameraBlockedOpen, setCameraBlockedOpen] = useState(false);
   const [showHowToFix, setShowHowToFix] = useState(false);
   const [blackScreenDetected, setBlackScreenDetected] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<"idle" | "asking" | "granted" | "denied" | "notfound">("idle");
   const blackScreenCheckRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);

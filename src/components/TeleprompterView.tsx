@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Minus, Plus, Pause, Play, Video, VideoOff, ArrowUp, EyeOff, Maximize, Minimize, Palette } from "lucide-react";
+import { X, Minus, Plus, Pause, Play, Video, VideoOff, ArrowUp, EyeOff, Maximize, Minimize, Palette, RefreshCw } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import ReviewRecordingModal from "@/components/ReviewRecordingModal";
 import { finalizeRecordingBlob, getPreferredRecordingMimeType, waitForFinalizationWindow } from "@/lib/recording";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface TeleprompterViewProps {
   content: string;
@@ -33,6 +35,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [reviewDetectedDurationMs, setReviewDetectedDurationMs] = useState<number | null>(null);
   const [recordingElapsed, setRecordingElapsed] = useState(0);
   const [processingStage, setProcessingStage] = useState<"processing" | "finalizing" | null>(null);
+  const [cameraBlockedOpen, setCameraBlockedOpen] = useState(false);
+  const [showHowToFix, setShowHowToFix] = useState(false);
+  const [blackScreenDetected, setBlackScreenDetected] = useState(false);
+  const blackScreenCheckRef = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -199,16 +206,69 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
       });
       setCameraStream(stream);
+      setBlackScreenDetected(false);
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) {
       console.error("Camera error:", err);
-      if (err instanceof Error && err.name === "NotAllowedError") {
-        toast.error(t("cameraNotAvailable"));
+      if (err instanceof Error && (err.name === "NotAllowedError" || err.name === "NotFoundError")) {
+        setCameraBlockedOpen(true);
       } else {
         toast.error(t("recordingError"));
       }
     }
   }, [t]);
+
+  // Black screen detection: sample pixels after camera opens
+  useEffect(() => {
+    if (!cameraStream || !videoRef.current) {
+      setBlackScreenDetected(false);
+      if (blackScreenCheckRef.current) clearInterval(blackScreenCheckRef.current);
+      return;
+    }
+    if (!canvasRef.current) canvasRef.current = document.createElement("canvas");
+    const canvas = canvasRef.current;
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext("2d");
+    let checks = 0;
+
+    blackScreenCheckRef.current = window.setInterval(() => {
+      checks++;
+      if (!videoRef.current || !ctx || !cameraStream) return;
+      ctx.drawImage(videoRef.current, 0, 0, 16, 16);
+      const data = ctx.getImageData(0, 0, 16, 16).data;
+      let totalBrightness = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        totalBrightness += data[i] + data[i + 1] + data[i + 2];
+      }
+      const avgBrightness = totalBrightness / (16 * 16 * 3);
+      if (avgBrightness < 5 && checks >= 3) {
+        setBlackScreenDetected(true);
+      } else if (avgBrightness >= 5) {
+        setBlackScreenDetected(false);
+      }
+      // Stop checking after 10 checks (~5 seconds)
+      if (checks >= 10 && blackScreenCheckRef.current) {
+        clearInterval(blackScreenCheckRef.current);
+      }
+    }, 500);
+
+    return () => {
+      if (blackScreenCheckRef.current) clearInterval(blackScreenCheckRef.current);
+    };
+  }, [cameraStream]);
+
+  const resetCamera = useCallback(async () => {
+    // Stop current stream
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+    }
+    setCameraStream(null);
+    setBlackScreenDetected(false);
+    // Re-open after a small delay
+    await new Promise((r) => setTimeout(r, 300));
+    await openCamera();
+  }, [cameraStream, openCamera]);
 
   const closeCamera = useCallback(() => {
     const recorder = mediaRecorderRef.current;
@@ -609,6 +669,20 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               <span className="text-sm font-mono font-semibold text-white tabular-nums">{formatTime(recordingElapsed)}</span>
             </div>
           )}
+
+          {/* Black screen detection banner */}
+          {blackScreenDetected && !isRecording && (
+            <div className="absolute bottom-4 left-4 right-4 z-[30] flex items-center gap-3 bg-destructive/90 backdrop-blur-sm text-destructive-foreground rounded-xl px-4 py-3 shadow-lg">
+              <span className="text-sm font-medium flex-1">{t("blackScreenDetected")}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); resetCamera(); }}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 text-sm font-semibold transition-colors shrink-0"
+              >
+                <RefreshCw className="w-4 h-4" />
+                {t("resetCamera")}
+              </button>
+            </div>
+          )}
         </div>
       )}
       {cameraStream && !cameraVisible && cameraMode === "corner" && (
@@ -703,6 +777,46 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           onClose={() => { setReviewBlob(null); setReviewMime(""); setReviewDetectedDurationMs(null); }}
         />
       )}
+
+      {/* Camera Blocked Dialog */}
+      <Dialog open={cameraBlockedOpen} onOpenChange={setCameraBlockedOpen}>
+        <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle className="text-xl">{t("cameraBlockedTitle")}</DialogTitle>
+            <DialogDescription>{t("cameraBlockedDesc")}</DialogDescription>
+          </DialogHeader>
+
+          {!showHowToFix ? (
+            <div className="flex flex-col gap-3 pt-2">
+              <Button onClick={() => setShowHowToFix(true)} variant="default" className="w-full py-3 text-base">
+                {t("howToFix")}
+              </Button>
+              <Button onClick={() => setCameraBlockedOpen(false)} variant="outline" className="w-full py-3">
+                {t("close")}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 pt-2">
+              <div className="bg-muted rounded-xl p-4 space-y-3">
+                <p className="text-sm font-medium">{t("cameraBlockedStep1")}</p>
+                <p className="text-sm font-medium">{t("cameraBlockedStep2")}</p>
+                <p className="text-sm font-medium">{t("cameraBlockedStep3")}</p>
+              </div>
+              <Button
+                onClick={() => window.location.reload()}
+                variant="default"
+                className="w-full py-3 text-base gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                {t("refreshPage")}
+              </Button>
+              <Button onClick={() => { setShowHowToFix(false); setCameraBlockedOpen(false); }} variant="outline" className="w-full py-3">
+                {t("close")}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

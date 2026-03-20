@@ -30,6 +30,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [isWebView] = useState(() => /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat/i.test(navigator.userAgent || ""));
   const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
   const [reviewMime, setReviewMime] = useState("");
+  const [reviewDetectedDurationMs, setReviewDetectedDurationMs] = useState<number | null>(null);
   const [recordingElapsed, setRecordingElapsed] = useState(0);
   const [processingStage, setProcessingStage] = useState<"processing" | "finalizing" | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -268,24 +269,26 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       if (rawBlob.size === 0) { toast.error(t("recordingError")); setProcessingStage(null); return; }
 
       const duration = Date.now() - recordingStartRef.current;
+      const durationForMetadataMs = Math.max(duration - 3000, 1000);
       setProcessingStage("finalizing");
 
-      const finalize = async (blob: Blob) => {
+      const finalize = async (blob: Blob, detectedDurationMs: number | null) => {
         try {
           const { storeBlob } = await import("@/components/ReviewRecordingModal");
-          await storeBlob(blob, mimeType);
+          await storeBlob(blob, mimeType, detectedDurationMs);
         } catch { /* best effort */ }
         setProcessingStage(null);
         setReviewBlob(blob);
         setReviewMime(mimeType);
+        setReviewDetectedDurationMs(detectedDurationMs);
       };
 
-      const [finalBlob] = await Promise.all([
-        finalizeRecordingBlob(rawBlob, mimeType, duration),
+      const [finalizedRecording] = await Promise.all([
+        finalizeRecordingBlob(rawBlob, mimeType, durationForMetadataMs),
         waitForFinalizationWindow(2500),
       ]);
 
-      await finalize(finalBlob);
+      await finalize(finalizedRecording.blob, finalizedRecording.detectedDurationMs);
     };
 
     recorder.onerror = (event) => {
@@ -374,6 +377,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       if (stored && stored.blob.size > 0) {
         setReviewBlob(stored.blob);
         setReviewMime(stored.mimeType);
+        setReviewDetectedDurationMs(stored.detectedDurationMs ?? null);
       }
     };
     recover();
@@ -695,7 +699,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         <ReviewRecordingModal
           blob={reviewBlob}
           mimeType={reviewMime}
-          onClose={() => { setReviewBlob(null); setReviewMime(""); }}
+          detectedDurationMs={reviewDetectedDurationMs}
+          onClose={() => { setReviewBlob(null); setReviewMime(""); setReviewDetectedDurationMs(null); }}
         />
       )}
     </div>

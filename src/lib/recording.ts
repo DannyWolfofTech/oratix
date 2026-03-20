@@ -2,6 +2,11 @@ import fixWebmDuration from "fix-webm-duration";
 
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
+export interface FinalizedRecordingResult {
+  blob: Blob;
+  detectedDurationMs: number | null;
+}
+
 const isSupportedMimeType = (mimeType: string) => {
   if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
     return false;
@@ -97,6 +102,23 @@ export const measureBlobDuration = async (blob: Blob): Promise<number | null> =>
   });
 };
 
+const toDurationMs = (durationSeconds: number | null) => {
+  if (!durationSeconds || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+    return null;
+  }
+
+  return Math.round(durationSeconds * 1000);
+};
+
+const reblobRecording = (blob: Blob, mimeType: string) => {
+  const extension = mimeType.includes("mp4") ? "mp4" : "webm";
+
+  return new File([blob], `recording-final.${extension}`, {
+    type: mimeType,
+    lastModified: Date.now() + 1,
+  });
+};
+
 const patchWebmDuration = async (blob: Blob, durationMs: number) => {
   return new Promise<Blob>((resolve, reject) => {
     let settled = false;
@@ -122,19 +144,57 @@ const patchWebmDuration = async (blob: Blob, durationMs: number) => {
   });
 };
 
-export const finalizeRecordingBlob = async (blob: Blob, mimeType: string, recordedDurationMs: number) => {
-  if (!mimeType.includes("webm") || recordedDurationMs <= 0) {
-    return blob;
+export const finalizeRecordingBlob = async (
+  blob: Blob,
+  mimeType: string,
+  recordedDurationMs: number
+): Promise<FinalizedRecordingResult> => {
+  const safeRecordedDurationMs = recordedDurationMs > 0 ? Math.max(recordedDurationMs, 1000) : null;
+
+  if (!mimeType.includes("webm")) {
+    const detectedDurationMs = toDurationMs(await measureBlobDuration(blob)) ?? safeRecordedDurationMs;
+
+    return {
+      blob: reblobRecording(blob, mimeType),
+      detectedDurationMs,
+    };
   }
 
-  const durationHintMs = Math.max(recordedDurationMs, 1000);
+  const initialDetectedDurationMs = toDurationMs(await measureBlobDuration(blob));
+  const durationHints = [safeRecordedDurationMs, initialDetectedDurationMs].filter(
+    (value): value is number => typeof value === "number" && value > 0
+  );
 
-  try {
-    return await patchWebmDuration(blob, durationHintMs);
-  } catch (error) {
-    console.warn("[Recording] fix-webm-duration failed, keeping original blob", error);
-    return blob;
+  let candidateBlob = blob;
+
+  for (const durationHintMs of durationHints) {
+    try {
+      candidateBlob = await patchWebmDuration(candidateBlob, durationHintMs);
+      break;
+    } catch (error) {
+      console.warn("[Recording] fix-webm-duration attempt failed", { durationHintMs, error });
+    }
   }
+
+  const seekerDerivedDurationMs = toDurationMs(await measureBlobDuration(candidateBlob));
+
+  if (seekerDerivedDurationMs && (!initialDetectedDurationMs || Math.abs(seekerDerivedDurationMs - initialDetectedDurationMs) > 750)) {
+    try {
+      candidateBlob = await patchWebmDuration(candidateBlob, seekerDerivedDurationMs);
+    } catch (error) {
+      console.warn("[Recording] seeker-duration patch fallback failed", error);
+    }
+  }
+
+  const detectedDurationMs = toDurationMs(await measureBlobDuration(candidateBlob))
+    ?? seekerDerivedDurationMs
+    ?? initialDetectedDurationMs
+    ?? safeRecordedDurationMs;
+
+  return {
+    blob: reblobRecording(candidateBlob, mimeType),
+    detectedDurationMs,
+  };
 };
 
 export const waitForFinalizationWindow = async (minimumMs = 2500) => {

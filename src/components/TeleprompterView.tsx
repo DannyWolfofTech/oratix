@@ -299,60 +299,9 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   const startRecording = useCallback(() => {
     if (!cameraStream) return;
-    chunksRef.current = [];
-
-    const mimeType = MediaRecorder.isTypeSupported("video/mp4")
-      ? "video/mp4"
-      : MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-      ? "video/webm;codecs=vp9,opus"
-      : MediaRecorder.isTypeSupported("video/webm")
-      ? "video/webm"
-      : "";
-
-    if (!mimeType) {
-      toast.error(t("recordingError"));
-      return;
-    }
-
-    const recorder = new MediaRecorder(cameraStream, { mimeType });
-    recorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-    };
-
-    recorder.onstop = async () => {
-      const chunks = chunksRef.current;
-      chunksRef.current = [];
-      if (chunks.length === 0) { toast.error(t("recordingError")); return; }
-      const rawBlob = new Blob(chunks, { type: mimeType });
-      if (rawBlob.size === 0) { toast.error(t("recordingError")); return; }
-
-      const duration = Date.now() - recordingStartRef.current;
-
-      const finalize = async (blob: Blob) => {
-        try {
-          const { storeBlob } = await import("@/components/ReviewRecordingModal");
-          await storeBlob(blob, mimeType);
-        } catch { /* best effort */ }
-        setIsProcessing(false);
-        setReviewBlob(blob);
-        setReviewMime(mimeType);
-      };
-
-      if (mimeType.includes("webm") && duration > 0) {
-        fixWebmDuration(rawBlob, duration, (fixedBlob: Blob) => {
-          finalize(fixedBlob);
-        });
-      } else {
-        finalize(rawBlob);
-      }
-    };
-
-    mediaRecorderRef.current = recorder;
-    recordingStartRef.current = Date.now();
-    recorder.start(1000); // 1-second timeslice for crash safety
-    setIsRecording(true);
+    pendingRecordRef.current = true;
     startPlayWithCountdown();
-  }, [cameraStream, t, startPlayWithCountdown]);
+  }, [cameraStream, startPlayWithCountdown]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {

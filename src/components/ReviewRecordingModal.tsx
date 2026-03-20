@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Download, X, Share2 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { measureBlobDuration } from "@/lib/recording";
 import { toast } from "sonner";
 
 const DB_NAME = "TelePromptRecordings";
@@ -105,6 +106,13 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
     if (!activeBlob) return;
     setSaving(true);
     const fileName = getFileName();
+    const detectedDuration = await measureBlobDuration(activeBlob);
+    console.log("[Recording Download]", {
+      fileName,
+      mimeType: activeMime,
+      blobSizeBytes: activeBlob.size,
+      detectedDurationSeconds: detectedDuration,
+    });
     const url = URL.createObjectURL(activeBlob);
     const a = document.createElement("a");
     a.style.display = "none";
@@ -119,7 +127,7 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
     toast.success(t("reviewSaveSuccess"), { duration: 10000 });
     setSaving(false);
     onClose();
-  }, [activeBlob, getFileName, t, onClose]);
+  }, [activeBlob, activeMime, getFileName, t, onClose]);
 
   // Share to apps (Drive, etc.)
   const handleSave = useCallback(async () => {

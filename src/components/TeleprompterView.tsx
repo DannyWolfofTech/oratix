@@ -4,8 +4,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import fixWebmDuration from "fix-webm-duration";
 import ReviewRecordingModal from "@/components/ReviewRecordingModal";
+import { finalizeRecordingBlob, getPreferredRecordingMimeType, waitForFinalizationWindow } from "@/lib/recording";
 
 interface TeleprompterViewProps {
   content: string;
@@ -31,7 +31,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
   const [reviewMime, setReviewMime] = useState("");
   const [recordingElapsed, setRecordingElapsed] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStage, setProcessingStage] = useState<"processing" | "finalizing" | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -43,6 +43,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
   const pendingRecordRef = useRef(false);
+  const requestDataIntervalRef = useRef<number | null>(null);
+
+  const clearRequestDataInterval = useCallback(() => {
+    if (requestDataIntervalRef.current !== null) {
+      window.clearInterval(requestDataIntervalRef.current);
+      requestDataIntervalRef.current = null;
+    }
+  }, []);
 
   // Keep refs in sync
   useEffect(() => { speedRef.current = speed; }, [speed]);
@@ -234,17 +242,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     chunksRef.current = [];
 
     // Broad codec fallback for maximum mobile compatibility (audio codec errors)
-    const candidates = [
-      "video/mp4;codecs=avc1.42E01E,mp4a.40.2",  // H.264 + AAC (Safari/iOS)
-      "video/mp4",
-      "video/webm;codecs=vp9,opus",                // VP9 + Opus (Chrome)
-      "video/webm;codecs=vp8,opus",                // VP8 + Opus (older Chrome/Firefox)
-      "video/webm;codecs=vp8,pcm",                 // VP8 + PCM fallback
-      "video/webm;codecs=vp9",
-      "video/webm;codecs=vp8",
-      "video/webm",
-    ];
-    const mimeType = candidates.find((m) => MediaRecorder.isTypeSupported(m)) || "";
+    const mimeType = getPreferredRecordingMimeType();
 
     if (!mimeType) { toast.error(t("recordingError")); return; }
     console.log("[Recording] Using codec:", mimeType);
@@ -253,6 +251,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     // Set a reasonable bitrate for mobile devices
     try {
       recorderOptions.videoBitsPerSecond = 2_500_000; // 2.5 Mbps
+      recorderOptions.audioBitsPerSecond = 128_000;
     } catch { /* ignore if unsupported */ }
 
     const recorder = new MediaRecorder(cameraStream, recorderOptions);
@@ -261,46 +260,56 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     };
 
     recorder.onstop = async () => {
+      clearRequestDataInterval();
       const chunks = chunksRef.current;
       chunksRef.current = [];
-      if (chunks.length === 0) { toast.error(t("recordingError")); return; }
+      if (chunks.length === 0) { toast.error(t("recordingError")); setProcessingStage(null); return; }
       const rawBlob = new Blob(chunks, { type: mimeType });
-      if (rawBlob.size === 0) { toast.error(t("recordingError")); return; }
+      if (rawBlob.size === 0) { toast.error(t("recordingError")); setProcessingStage(null); return; }
 
       const duration = Date.now() - recordingStartRef.current;
+      setProcessingStage("finalizing");
 
       const finalize = async (blob: Blob) => {
         try {
           const { storeBlob } = await import("@/components/ReviewRecordingModal");
           await storeBlob(blob, mimeType);
         } catch { /* best effort */ }
-        setIsProcessing(false);
+        setProcessingStage(null);
         setReviewBlob(blob);
         setReviewMime(mimeType);
       };
 
-      // Fix WebM duration metadata so seekbar works correctly
-      if (mimeType.includes("webm") && duration > 0) {
-        fixWebmDuration(rawBlob, duration, (fixedBlob: Blob) => {
-          finalize(fixedBlob);
-        });
-      } else {
-        finalize(rawBlob);
-      }
+      const [finalBlob] = await Promise.all([
+        finalizeRecordingBlob(rawBlob, mimeType, duration),
+        waitForFinalizationWindow(2500),
+      ]);
+
+      await finalize(finalBlob);
     };
 
     recorder.onerror = (event) => {
+      clearRequestDataInterval();
       console.error("[Recording] MediaRecorder error:", event);
       toast.error(t("recordingError"));
       setIsRecording(false);
-      setIsProcessing(false);
+      setProcessingStage(null);
     };
 
     mediaRecorderRef.current = recorder;
     recordingStartRef.current = Date.now();
     recorder.start(1000); // 1-second timeslices to prevent data loss
+    requestDataIntervalRef.current = window.setInterval(() => {
+      try {
+        if (recorder.state === "recording") {
+          recorder.requestData();
+        }
+      } catch (error) {
+        console.warn("[Recording] requestData failed", error);
+      }
+    }, 1000);
     setIsRecording(true);
-  }, [cameraStream, t]);
+  }, [cameraStream, clearRequestDataInterval, t]);
 
   useEffect(() => {
     if (countdown === null) return;
@@ -327,13 +336,19 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     pendingRecordRef.current = false;
     const wasRecording = mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive";
     if (wasRecording) {
+      try {
+        mediaRecorderRef.current?.requestData();
+      } catch (error) {
+        console.warn("[Recording] final requestData failed", error);
+      }
+      clearRequestDataInterval();
       mediaRecorderRef.current!.stop();
-      setIsProcessing(true);
+      setProcessingStage("processing");
     }
     setIsRecording(false);
     setPlaying(false);
     setCountdown(null);
-  }, []);
+  }, [clearRequestDataInterval]);
 
   const startRecordAndScroll = useCallback(async () => {
     if (!cameraStream) await openCamera();
@@ -344,10 +359,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   useEffect(() => {
     return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        clearRequestDataInterval();
         try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
       }
     };
-  }, []);
+  }, [clearRequestDataInterval]);
 
   // Recover orphaned recording from IndexedDB on mount
   useEffect(() => {
@@ -667,10 +683,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       </div>
 
       {/* Processing spinner */}
-      {isProcessing && !reviewBlob && (
+      {processingStage && !reviewBlob && (
         <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-4">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-lg font-semibold text-white">{t("processingVideo")}</p>
+          <p className="text-lg font-semibold text-white">{t(processingStage === "finalizing" ? "finalizingVideo" : "processingVideo")}</p>
         </div>
       )}
 

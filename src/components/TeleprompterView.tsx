@@ -511,6 +511,23 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </div>
       )}
 
+      {/* Permission denied/notfound banner */}
+      {!cameraStream && (permissionStatus === "denied" || permissionStatus === "notfound") && (
+        <div className="fixed top-0 left-0 right-0 z-[150] bg-destructive text-destructive-foreground text-sm font-semibold text-center px-4 py-3 shadow-lg flex items-center justify-center gap-3 flex-wrap"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span>{permissionStatus === "denied" ? t("permDeniedBanner") : t("permNotFoundBanner")}</span>
+          {permissionStatus === "denied" && (
+            <button
+              onClick={() => setCameraBlockedOpen(true)}
+              className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-sm font-semibold transition-colors shrink-0"
+            >
+              {t("howToFix")}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Controls overlay */}
       <div
         onClick={(e) => e.stopPropagation()}

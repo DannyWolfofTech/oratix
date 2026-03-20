@@ -777,6 +777,46 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           onClose={() => { setReviewBlob(null); setReviewMime(""); setReviewDetectedDurationMs(null); }}
         />
       )}
+
+      {/* Camera Blocked Dialog */}
+      <Dialog open={cameraBlockedOpen} onOpenChange={setCameraBlockedOpen}>
+        <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle className="text-xl">{t("cameraBlockedTitle")}</DialogTitle>
+            <DialogDescription>{t("cameraBlockedDesc")}</DialogDescription>
+          </DialogHeader>
+
+          {!showHowToFix ? (
+            <div className="flex flex-col gap-3 pt-2">
+              <Button onClick={() => setShowHowToFix(true)} variant="default" className="w-full py-3 text-base">
+                {t("howToFix")}
+              </Button>
+              <Button onClick={() => setCameraBlockedOpen(false)} variant="outline" className="w-full py-3">
+                {t("close")}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 pt-2">
+              <div className="bg-muted rounded-xl p-4 space-y-3">
+                <p className="text-sm font-medium">{t("cameraBlockedStep1")}</p>
+                <p className="text-sm font-medium">{t("cameraBlockedStep2")}</p>
+                <p className="text-sm font-medium">{t("cameraBlockedStep3")}</p>
+              </div>
+              <Button
+                onClick={() => window.location.reload()}
+                variant="default"
+                className="w-full py-3 text-base gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                {t("refreshPage")}
+              </Button>
+              <Button onClick={() => { setShowHowToFix(false); setCameraBlockedOpen(false); }} variant="outline" className="w-full py-3">
+                {t("close")}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

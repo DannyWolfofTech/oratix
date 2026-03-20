@@ -42,6 +42,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
+  const pendingRecordRef = useRef(false);
 
   // Keep refs in sync
   useEffect(() => { speedRef.current = speed; }, [speed]);
@@ -228,18 +229,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setCountdown(3);
   }, []);
 
-  useEffect(() => {
-    if (countdown === null) return;
-    if (countdown === 0) {
-      setCountdown(null);
-      setPlaying(true);
-      return;
-    }
-    const timer = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown]);
-
-  const startRecording = useCallback(() => {
+  const actuallyStartRecorder = useCallback(() => {
     if (!cameraStream) return;
     chunksRef.current = [];
 
@@ -251,10 +241,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       ? "video/webm"
       : "";
 
-    if (!mimeType) {
-      toast.error(t("recordingError"));
-      return;
-    }
+    if (!mimeType) { toast.error(t("recordingError")); return; }
 
     const recorder = new MediaRecorder(cameraStream, { mimeType });
     recorder.ondataavailable = (e) => {
@@ -291,19 +278,41 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
     mediaRecorderRef.current = recorder;
     recordingStartRef.current = Date.now();
-    recorder.start(1000); // 1-second timeslice for crash safety
+    recorder.start(1000);
     setIsRecording(true);
+  }, [cameraStream, t]);
+
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      setCountdown(null);
+      setPlaying(true);
+      if (pendingRecordRef.current) {
+        pendingRecordRef.current = false;
+        actuallyStartRecorder();
+      }
+      return;
+    }
+    const timer = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
+    return () => clearTimeout(timer);
+  }, [countdown, actuallyStartRecorder]);
+
+  const startRecording = useCallback(() => {
+    if (!cameraStream) return;
+    pendingRecordRef.current = true;
     startPlayWithCountdown();
-  }, [cameraStream, t, startPlayWithCountdown]);
+  }, [cameraStream, startPlayWithCountdown]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+    pendingRecordRef.current = false;
+    const wasRecording = mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive";
+    if (wasRecording) {
+      mediaRecorderRef.current!.stop();
+      setIsProcessing(true);
     }
     setIsRecording(false);
     setPlaying(false);
     setCountdown(null);
-    setIsProcessing(true);
   }, []);
 
   const startRecordAndScroll = useCallback(async () => {
@@ -335,14 +344,30 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Recording timer
+  // Recording timer — only ticks while actively recording AND playing (pauses when paused)
+  const timerAccumulatedRef = useRef(0);
+  const timerLastTickRef = useRef(0);
   useEffect(() => {
-    if (!isRecording) { setRecordingElapsed(0); return; }
+    if (!isRecording) {
+      setRecordingElapsed(0);
+      timerAccumulatedRef.current = 0;
+      timerLastTickRef.current = 0;
+      return;
+    }
+    if (!playing) {
+      // Paused: freeze accumulated time
+      timerAccumulatedRef.current = recordingElapsed;
+      timerLastTickRef.current = 0;
+      return;
+    }
+    // Running: start ticking from accumulated
+    timerLastTickRef.current = Date.now();
     const interval = setInterval(() => {
-      setRecordingElapsed(Math.floor((Date.now() - recordingStartRef.current) / 1000));
+      const elapsed = timerAccumulatedRef.current + Math.floor((Date.now() - timerLastTickRef.current) / 1000);
+      setRecordingElapsed(elapsed);
     }, 1000);
     return () => clearInterval(interval);
-  }, [isRecording]);
+  }, [isRecording, playing]);
 
   const formatTime = (totalSec: number) => {
     const h = Math.floor(totalSec / 3600);

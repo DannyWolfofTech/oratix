@@ -305,13 +305,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   const stopRecording = useCallback(() => {
     pendingRecordRef.current = false;
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+    const wasRecording = mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive";
+    if (wasRecording) {
+      mediaRecorderRef.current!.stop();
+      setIsProcessing(true);
     }
     setIsRecording(false);
     setPlaying(false);
     setCountdown(null);
-    setIsProcessing(!!mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive" ? false : false);
   }, []);
 
   const startRecordAndScroll = useCallback(async () => {

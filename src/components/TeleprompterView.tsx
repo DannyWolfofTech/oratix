@@ -233,17 +233,29 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     if (!cameraStream) return;
     chunksRef.current = [];
 
-    const mimeType = MediaRecorder.isTypeSupported("video/mp4")
-      ? "video/mp4"
-      : MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-      ? "video/webm;codecs=vp9,opus"
-      : MediaRecorder.isTypeSupported("video/webm")
-      ? "video/webm"
-      : "";
+    // Broad codec fallback for maximum mobile compatibility (audio codec errors)
+    const candidates = [
+      "video/mp4;codecs=avc1.42E01E,mp4a.40.2",  // H.264 + AAC (Safari/iOS)
+      "video/mp4",
+      "video/webm;codecs=vp9,opus",                // VP9 + Opus (Chrome)
+      "video/webm;codecs=vp8,opus",                // VP8 + Opus (older Chrome/Firefox)
+      "video/webm;codecs=vp8,pcm",                 // VP8 + PCM fallback
+      "video/webm;codecs=vp9",
+      "video/webm;codecs=vp8",
+      "video/webm",
+    ];
+    const mimeType = candidates.find((m) => MediaRecorder.isTypeSupported(m)) || "";
 
     if (!mimeType) { toast.error(t("recordingError")); return; }
+    console.log("[Recording] Using codec:", mimeType);
 
-    const recorder = new MediaRecorder(cameraStream, { mimeType });
+    let recorderOptions: MediaRecorderOptions = { mimeType };
+    // Set a reasonable bitrate for mobile devices
+    try {
+      recorderOptions.videoBitsPerSecond = 2_500_000; // 2.5 Mbps
+    } catch { /* ignore if unsupported */ }
+
+    const recorder = new MediaRecorder(cameraStream, recorderOptions);
     recorder.ondataavailable = (e) => {
       if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
     };
@@ -267,6 +279,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         setReviewMime(mimeType);
       };
 
+      // Fix WebM duration metadata so seekbar works correctly
       if (mimeType.includes("webm") && duration > 0) {
         fixWebmDuration(rawBlob, duration, (fixedBlob: Blob) => {
           finalize(fixedBlob);
@@ -276,9 +289,16 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       }
     };
 
+    recorder.onerror = (event) => {
+      console.error("[Recording] MediaRecorder error:", event);
+      toast.error(t("recordingError"));
+      setIsRecording(false);
+      setIsProcessing(false);
+    };
+
     mediaRecorderRef.current = recorder;
     recordingStartRef.current = Date.now();
-    recorder.start(1000);
+    recorder.start(1000); // 1-second timeslices to prevent data loss
     setIsRecording(true);
   }, [cameraStream, t]);
 

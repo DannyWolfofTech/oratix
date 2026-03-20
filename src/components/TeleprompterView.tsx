@@ -613,6 +613,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </p>
       </div>
 
+      {/* Processing spinner */}
+      {isProcessing && !reviewBlob && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-lg font-semibold text-white">{t("processingVideo")}</p>
+        </div>
+      )}
+
       {/* Review Recording Modal */}
       {reviewBlob && (
         <ReviewRecordingModal

@@ -35,6 +35,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [reviewDetectedDurationMs, setReviewDetectedDurationMs] = useState<number | null>(null);
   const [recordingElapsed, setRecordingElapsed] = useState(0);
   const [processingStage, setProcessingStage] = useState<"processing" | "finalizing" | null>(null);
+  const [cameraBlockedOpen, setCameraBlockedOpen] = useState(false);
+  const [showHowToFix, setShowHowToFix] = useState(false);
+  const [blackScreenDetected, setBlackScreenDetected] = useState(false);
+  const blackScreenCheckRef = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();

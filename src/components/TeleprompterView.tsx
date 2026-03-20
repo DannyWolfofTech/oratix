@@ -30,6 +30,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
   const [reviewMime, setReviewMime] = useState("");
   const [recordingElapsed, setRecordingElapsed] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();

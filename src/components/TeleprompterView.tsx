@@ -206,16 +206,69 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 },
       });
       setCameraStream(stream);
+      setBlackScreenDetected(false);
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) {
       console.error("Camera error:", err);
-      if (err instanceof Error && err.name === "NotAllowedError") {
-        toast.error(t("cameraNotAvailable"));
+      if (err instanceof Error && (err.name === "NotAllowedError" || err.name === "NotFoundError")) {
+        setCameraBlockedOpen(true);
       } else {
         toast.error(t("recordingError"));
       }
     }
   }, [t]);
+
+  // Black screen detection: sample pixels after camera opens
+  useEffect(() => {
+    if (!cameraStream || !videoRef.current) {
+      setBlackScreenDetected(false);
+      if (blackScreenCheckRef.current) clearInterval(blackScreenCheckRef.current);
+      return;
+    }
+    if (!canvasRef.current) canvasRef.current = document.createElement("canvas");
+    const canvas = canvasRef.current;
+    canvas.width = 16;
+    canvas.height = 16;
+    const ctx = canvas.getContext("2d");
+    let checks = 0;
+
+    blackScreenCheckRef.current = window.setInterval(() => {
+      checks++;
+      if (!videoRef.current || !ctx || !cameraStream) return;
+      ctx.drawImage(videoRef.current, 0, 0, 16, 16);
+      const data = ctx.getImageData(0, 0, 16, 16).data;
+      let totalBrightness = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        totalBrightness += data[i] + data[i + 1] + data[i + 2];
+      }
+      const avgBrightness = totalBrightness / (16 * 16 * 3);
+      if (avgBrightness < 5 && checks >= 3) {
+        setBlackScreenDetected(true);
+      } else if (avgBrightness >= 5) {
+        setBlackScreenDetected(false);
+      }
+      // Stop checking after 10 checks (~5 seconds)
+      if (checks >= 10 && blackScreenCheckRef.current) {
+        clearInterval(blackScreenCheckRef.current);
+      }
+    }, 500);
+
+    return () => {
+      if (blackScreenCheckRef.current) clearInterval(blackScreenCheckRef.current);
+    };
+  }, [cameraStream]);
+
+  const resetCamera = useCallback(async () => {
+    // Stop current stream
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+    }
+    setCameraStream(null);
+    setBlackScreenDetected(false);
+    // Re-open after a small delay
+    await new Promise((r) => setTimeout(r, 300));
+    await openCamera();
+  }, [cameraStream, openCamera]);
 
   const closeCamera = useCallback(() => {
     const recorder = mediaRecorderRef.current;

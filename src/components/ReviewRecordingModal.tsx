@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Download, X, Share2 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { measureBlobDuration } from "@/lib/recording";
 import { toast } from "sonner";
+import RecordingPreviewPlayer from "@/components/RecordingPreviewPlayer";
 
 const DB_NAME = "TelePromptRecordings";
 const STORE_NAME = "blobs";
@@ -20,17 +20,17 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-export async function storeBlob(blob: Blob, mimeType: string): Promise<void> {
+export async function storeBlob(blob: Blob, mimeType: string, detectedDurationMs: number | null = null): Promise<void> {
   const db = await openDB();
   const tx = db.transaction(STORE_NAME, "readwrite");
-  tx.objectStore(STORE_NAME).put({ blob, mimeType, timestamp: Date.now() }, DB_KEY);
+  tx.objectStore(STORE_NAME).put({ blob, mimeType, timestamp: Date.now(), detectedDurationMs }, DB_KEY);
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
 
-export async function loadBlob(): Promise<{ blob: Blob; mimeType: string } | null> {
+export async function loadBlob(): Promise<{ blob: Blob; mimeType: string; detectedDurationMs?: number | null } | null> {
   try {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, "readonly");
@@ -55,17 +55,17 @@ async function clearBlob(): Promise<void> {
 interface ReviewRecordingModalProps {
   blob: Blob | null;
   mimeType: string;
+  detectedDurationMs?: number | null;
   onClose: () => void;
 }
 
-const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalProps) => {
+const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetectedDurationMs = null, onClose }: ReviewRecordingModalProps) => {
   const { t } = useLanguage();
-  const isMobile = useIsMobile();
-  const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [activeBlob, setActiveBlob] = useState<Blob | null>(blob);
   const [activeMime, setActiveMime] = useState(mimeType);
+  const [detectedDurationMs, setDetectedDurationMs] = useState<number | null>(initialDetectedDurationMs);
 
   // On mount: persist blob to IndexedDB, or recover from it
   useEffect(() => {
@@ -73,7 +73,8 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
       if (blob && blob.size > 0) {
         setActiveBlob(blob);
         setActiveMime(mimeType);
-        await storeBlob(blob, mimeType);
+        setDetectedDurationMs(initialDetectedDurationMs);
+        await storeBlob(blob, mimeType, initialDetectedDurationMs);
         const url = URL.createObjectURL(blob);
         setPreviewUrl(url);
       } else {
@@ -82,6 +83,7 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
         if (stored) {
           setActiveBlob(stored.blob);
           setActiveMime(stored.mimeType);
+          setDetectedDurationMs(stored.detectedDurationMs ?? null);
           const url = URL.createObjectURL(stored.blob);
           setPreviewUrl(url);
         }
@@ -93,7 +95,30 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [blob, initialDetectedDurationMs, mimeType]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const resolveDuration = async () => {
+      if (!activeBlob || detectedDurationMs) return;
+
+      const measuredDuration = await measureBlobDuration(activeBlob);
+      if (cancelled) return;
+
+      if (measuredDuration && measuredDuration > 0) {
+        const nextDetectedDurationMs = Math.round(measuredDuration * 1000);
+        setDetectedDurationMs(nextDetectedDurationMs);
+        await storeBlob(activeBlob, activeMime, nextDetectedDurationMs);
+      }
+    };
+
+    resolveDuration();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeBlob, activeMime, detectedDurationMs]);
 
   const getFileName = useCallback(() => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -106,7 +131,7 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
     if (!activeBlob) return;
     setSaving(true);
     const fileName = getFileName();
-    const detectedDuration = await measureBlobDuration(activeBlob);
+    const detectedDuration = detectedDurationMs ? detectedDurationMs / 1000 : await measureBlobDuration(activeBlob);
     console.log("[Recording Download]", {
       fileName,
       mimeType: activeMime,
@@ -182,12 +207,9 @@ const ReviewRecordingModal = ({ blob, mimeType, onClose }: ReviewRecordingModalP
         {/* Video preview */}
         <div className="p-4">
           {previewUrl ? (
-            <video
-              ref={videoPreviewRef}
+            <RecordingPreviewPlayer
               src={previewUrl}
-              controls
-              playsInline
-              className="w-full rounded-xl bg-black aspect-video"
+              detectedDurationMs={detectedDurationMs}
             />
           ) : (
             <div className="w-full aspect-video bg-secondary/30 rounded-xl flex items-center justify-center">

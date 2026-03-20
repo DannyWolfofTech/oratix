@@ -199,8 +199,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       toast.error(t("cameraNotAvailable"));
       console.error("mediaDevices API not available – possibly blocked by Permissions-Policy or insecure context");
+      setPermissionStatus("denied");
       return;
     }
+    setPermissionStatus("asking");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -208,12 +210,18 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       });
       setCameraStream(stream);
       setBlackScreenDetected(false);
+      setPermissionStatus("granted");
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) {
       console.error("Camera error:", err);
-      if (err instanceof Error && (err.name === "NotAllowedError" || err.name === "NotFoundError")) {
+      if (err instanceof Error && err.name === "NotAllowedError") {
+        setPermissionStatus("denied");
         setCameraBlockedOpen(true);
+      } else if (err instanceof Error && err.name === "NotFoundError") {
+        setPermissionStatus("notfound");
+        toast.error(t("permNotFoundBanner"), { duration: 8000 });
       } else {
+        setPermissionStatus("denied");
         toast.error(t("recordingError"));
       }
     }

@@ -98,6 +98,11 @@ const translations = {
   refreshPage: "Reîncarcă pagina",
   blackScreenDetected: "Ecranul camerei pare negru. Apasă pentru a reseta camera.",
   resetCamera: "Resetează Camera",
+  permAsking: "Se solicită...",
+  permGranted: "Conectat",
+  permBlocked: "Blocat",
+  permDeniedBanner: "Acces Refuzat! 🔒 Te rugăm să permiți accesul la cameră din setările browserului pentru a înregistra.",
+  permNotFoundBanner: "Cameră negăsită! 📷 Verifică dacă nicio altă aplicație nu folosește camera în acest moment.",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

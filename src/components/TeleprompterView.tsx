@@ -42,6 +42,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
+  const pendingRecordRef = useRef(false);
 
   // Keep refs in sync
   useEffect(() => { speedRef.current = speed; }, [speed]);

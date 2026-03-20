@@ -370,6 +370,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       onMouseMove={handleMouseMove}
       onClick={handleTap}
     >
+      {/* WebView warning banner */}
+      {isWebView && (
+        <div className="fixed top-0 left-0 right-0 z-[150] bg-destructive text-destructive-foreground text-sm font-semibold text-center px-4 py-3 shadow-lg">
+          {t("webviewWarning")}
+        </div>
+      )}
+
       {/* Controls overlay */}
       <div
         onClick={(e) => e.stopPropagation()}

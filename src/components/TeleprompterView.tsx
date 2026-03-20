@@ -274,6 +274,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           const { storeBlob } = await import("@/components/ReviewRecordingModal");
           await storeBlob(blob, mimeType);
         } catch { /* best effort */ }
+        setIsProcessing(false);
         setReviewBlob(blob);
         setReviewMime(mimeType);
       };

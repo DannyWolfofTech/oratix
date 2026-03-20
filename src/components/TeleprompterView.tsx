@@ -342,14 +342,30 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Recording timer
+  // Recording timer — only ticks while actively recording AND playing (pauses when paused)
+  const timerAccumulatedRef = useRef(0);
+  const timerLastTickRef = useRef(0);
   useEffect(() => {
-    if (!isRecording) { setRecordingElapsed(0); return; }
+    if (!isRecording) {
+      setRecordingElapsed(0);
+      timerAccumulatedRef.current = 0;
+      timerLastTickRef.current = 0;
+      return;
+    }
+    if (!playing) {
+      // Paused: freeze accumulated time
+      timerAccumulatedRef.current = recordingElapsed;
+      timerLastTickRef.current = 0;
+      return;
+    }
+    // Running: start ticking from accumulated
+    timerLastTickRef.current = Date.now();
     const interval = setInterval(() => {
-      setRecordingElapsed(Math.floor((Date.now() - recordingStartRef.current) / 1000));
+      const elapsed = timerAccumulatedRef.current + Math.floor((Date.now() - timerLastTickRef.current) / 1000);
+      setRecordingElapsed(elapsed);
     }, 1000);
     return () => clearInterval(interval);
-  }, [isRecording]);
+  }, [isRecording, playing]);
 
   const formatTime = (totalSec: number) => {
     const h = Math.floor(totalSec / 3600);

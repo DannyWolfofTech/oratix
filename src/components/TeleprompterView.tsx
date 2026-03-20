@@ -27,6 +27,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [cameraMode, setCameraMode] = useState<"corner" | "fullscreen">("fullscreen");
   const [isTouching, setIsTouching] = useState(false);
   const [textColor, setTextColor] = useState<"white" | "red" | "blue">("white");
+  const [isWebView] = useState(() => /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat/i.test(navigator.userAgent || ""));
   const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
   const [reviewMime, setReviewMime] = useState("");
   const [recordingElapsed, setRecordingElapsed] = useState(0);
@@ -369,6 +370,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       onMouseMove={handleMouseMove}
       onClick={handleTap}
     >
+      {/* WebView warning banner */}
+      {isWebView && (
+        <div className="fixed top-0 left-0 right-0 z-[150] bg-destructive text-destructive-foreground text-sm font-semibold text-center px-4 py-3 shadow-lg">
+          {t("webviewWarning")}
+        </div>
+      )}
+
       {/* Controls overlay */}
       <div
         onClick={(e) => e.stopPropagation()}

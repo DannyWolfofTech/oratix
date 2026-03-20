@@ -229,16 +229,73 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setCountdown(3);
   }, []);
 
+  const actuallyStartRecorder = useCallback(() => {
+    if (!cameraStream) return;
+    chunksRef.current = [];
+
+    const mimeType = MediaRecorder.isTypeSupported("video/mp4")
+      ? "video/mp4"
+      : MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+      ? "video/webm;codecs=vp9,opus"
+      : MediaRecorder.isTypeSupported("video/webm")
+      ? "video/webm"
+      : "";
+
+    if (!mimeType) { toast.error(t("recordingError")); return; }
+
+    const recorder = new MediaRecorder(cameraStream, { mimeType });
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      const chunks = chunksRef.current;
+      chunksRef.current = [];
+      if (chunks.length === 0) { toast.error(t("recordingError")); return; }
+      const rawBlob = new Blob(chunks, { type: mimeType });
+      if (rawBlob.size === 0) { toast.error(t("recordingError")); return; }
+
+      const duration = Date.now() - recordingStartRef.current;
+
+      const finalize = async (blob: Blob) => {
+        try {
+          const { storeBlob } = await import("@/components/ReviewRecordingModal");
+          await storeBlob(blob, mimeType);
+        } catch { /* best effort */ }
+        setIsProcessing(false);
+        setReviewBlob(blob);
+        setReviewMime(mimeType);
+      };
+
+      if (mimeType.includes("webm") && duration > 0) {
+        fixWebmDuration(rawBlob, duration, (fixedBlob: Blob) => {
+          finalize(fixedBlob);
+        });
+      } else {
+        finalize(rawBlob);
+      }
+    };
+
+    mediaRecorderRef.current = recorder;
+    recordingStartRef.current = Date.now();
+    recorder.start(1000);
+    setIsRecording(true);
+  }, [cameraStream, t]);
+
   useEffect(() => {
     if (countdown === null) return;
     if (countdown === 0) {
       setCountdown(null);
       setPlaying(true);
+      if (pendingRecordRef.current) {
+        pendingRecordRef.current = false;
+        actuallyStartRecorder();
+      }
       return;
     }
     const timer = setTimeout(() => setCountdown((c) => (c !== null ? c - 1 : null)), 1000);
     return () => clearTimeout(timer);
-  }, [countdown]);
+  }, [countdown, actuallyStartRecorder]);
 
   const startRecording = useCallback(() => {
     if (!cameraStream) return;

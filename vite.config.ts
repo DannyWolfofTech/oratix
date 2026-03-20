@@ -36,9 +36,6 @@ export default defineConfig(({ mode }) => ({
     },
     headers: {
       "Permissions-Policy": "camera=(self), microphone=(self), display-capture=(self)",
-      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' https: wss:; font-src 'self' data:;",
-      "X-Frame-Options": "SAMEORIGIN",
-      "X-XSS-Protection": "1; mode=block",
     },
   },
   plugins: [react(), mode === "development" && componentTagger(), versionPlugin()].filter(Boolean),

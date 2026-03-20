@@ -28,7 +28,7 @@ const ScriptList = ({ scripts, activeId, onSelect, onDelete, onCreate }: ScriptL
           {t("newScript")}
         </Button>
       </div>
-      <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
+      <div className="max-h-[50vh] overflow-y-auto space-y-3 pr-1">
         {scripts.length === 0 && (
           <p className="text-base font-medium text-muted-foreground text-center py-8">{t("noScripts")}</p>
         )}

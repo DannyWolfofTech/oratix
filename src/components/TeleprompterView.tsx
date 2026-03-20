@@ -669,6 +669,20 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               <span className="text-sm font-mono font-semibold text-white tabular-nums">{formatTime(recordingElapsed)}</span>
             </div>
           )}
+
+          {/* Black screen detection banner */}
+          {blackScreenDetected && !isRecording && (
+            <div className="absolute bottom-4 left-4 right-4 z-[30] flex items-center gap-3 bg-destructive/90 backdrop-blur-sm text-destructive-foreground rounded-xl px-4 py-3 shadow-lg">
+              <span className="text-sm font-medium flex-1">{t("blackScreenDetected")}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); resetCamera(); }}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 text-sm font-semibold transition-colors shrink-0"
+              >
+                <RefreshCw className="w-4 h-4" />
+                {t("resetCamera")}
+              </button>
+            </div>
+          )}
         </div>
       )}
       {cameraStream && !cameraVisible && cameraMode === "corner" && (

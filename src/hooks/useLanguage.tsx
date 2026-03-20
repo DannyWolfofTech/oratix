@@ -87,6 +87,7 @@ const translations = {
   downloadVideo: "Descarcă Video",
   shareVideo: "Partajează",
   processingVideo: "Se procesează videoul...",
+  finalizingVideo: "Se finalizează videoul...",
   webviewWarning: "\u26A0\uFE0F \u00CEnregistrarea s-ar putea s\u0103 nu se salveze aici. Apas\u0103 pe cele trei puncte (\u22EE) \u0219i alege \u00ABDeschide \u00EEn Chrome\u00BB pentru a \u00EEnregistra \u0219i salva cu succes.",
 } as const;
 

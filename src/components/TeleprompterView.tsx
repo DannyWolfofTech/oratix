@@ -672,6 +672,20 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             playsInline
             className="w-full h-full object-cover"
           />
+          {/* Permission status dot - top right */}
+          <div className="absolute top-3 right-3 z-[35] flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1.5">
+            <div className={`w-2.5 h-2.5 rounded-full ${
+              permissionStatus === "granted" ? "bg-green-500 shadow-[0_0_6px_hsl(142_76%_36%)]" :
+              permissionStatus === "asking" ? "bg-yellow-400 animate-pulse" :
+              "bg-red-500 shadow-[0_0_6px_hsl(0_84%_60%)]"
+            }`} />
+            <span className="text-[10px] font-mono text-white/80">
+              {permissionStatus === "granted" ? t("permGranted") :
+               permissionStatus === "asking" ? t("permAsking") :
+               t("permBlocked")}
+            </span>
+          </div>
+
           {isRecording && (
             <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5">
               <div className="w-3 h-3 rounded-full bg-destructive animate-pulse border border-destructive-foreground" />

@@ -242,7 +242,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         totalBrightness += data[i] + data[i + 1] + data[i + 2];
       }
       const avgBrightness = totalBrightness / (16 * 16 * 3);
-      if (avgBrightness < 5 && checks >= 3) {
+      if (avgBrightness < 5 && checks >= 8) {
         setBlackScreenDetected(true);
       } else if (avgBrightness >= 5) {
         setBlackScreenDetected(false);

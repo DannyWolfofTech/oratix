@@ -87,6 +87,7 @@ const translations = {
   downloadVideo: "Descarcă Video",
   shareVideo: "Partajează",
   processingVideo: "Se procesează videoul...",
+  webviewWarning: "⚠️ Înregistrarea s-ar putea să nu se salveze aici. Apasă pe cele trei puncte (⋮) și alege „Deschide în Chrome" pentru a înregistra și salva cu succes.",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

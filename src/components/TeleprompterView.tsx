@@ -30,6 +30,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
   const [reviewMime, setReviewMime] = useState("");
   const [recordingElapsed, setRecordingElapsed] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
@@ -273,6 +274,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           const { storeBlob } = await import("@/components/ReviewRecordingModal");
           await storeBlob(blob, mimeType);
         } catch { /* best effort */ }
+        setIsProcessing(false);
         setReviewBlob(blob);
         setReviewMime(mimeType);
       };
@@ -300,6 +302,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setIsRecording(false);
     setPlaying(false);
     setCountdown(null);
+    setIsProcessing(true);
   }, []);
 
   const startRecordAndScroll = useCallback(async () => {
@@ -609,6 +612,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           {isMobile ? t("mobileHint") : t("desktopHint")}
         </p>
       </div>
+
+      {/* Processing spinner */}
+      {isProcessing && !reviewBlob && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-lg font-semibold text-white">{t("processingVideo")}</p>
+        </div>
+      )}
 
       {/* Review Recording Modal */}
       {reviewBlob && (

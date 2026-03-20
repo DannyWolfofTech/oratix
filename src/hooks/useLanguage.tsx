@@ -86,6 +86,7 @@ const translations = {
   reviewSaveHint: "Pe iPhone, apasă Partajare apoi 'Salvează Video'. Pe Android, verifică folderul Descărcări sau Galeria.",
   downloadVideo: "Descarcă Video",
   shareVideo: "Partajează",
+  processingVideo: "Se procesează videoul...",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

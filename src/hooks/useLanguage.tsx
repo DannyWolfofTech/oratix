@@ -89,6 +89,15 @@ const translations = {
   processingVideo: "Se procesează videoul...",
   finalizingVideo: "Se finalizează videoul...",
   webviewWarning: "\u26A0\uFE0F \u00CEnregistrarea s-ar putea s\u0103 nu se salveze aici. Apas\u0103 pe cele trei puncte (\u22EE) \u0219i alege \u00ABDeschide \u00EEn Chrome\u00BB pentru a \u00EEnregistra \u0219i salva cu succes.",
+  cameraBlockedTitle: "Cameră blocată! 🛑",
+  cameraBlockedDesc: "Browserul tău a blocat accesul la cameră sau microfon. Trebuie să activezi permisiunile manual.",
+  cameraBlockedStep1: "1. Apasă pe iconița lacătului 🔒 din bara de adrese",
+  cameraBlockedStep2: "2. Activează Camera și Microfonul (pune pe ON)",
+  cameraBlockedStep3: "3. Reîncarcă pagina",
+  howToFix: "Cum repar",
+  refreshPage: "Reîncarcă pagina",
+  blackScreenDetected: "Ecranul camerei pare negru. Apasă pentru a reseta camera.",
+  resetCamera: "Resetează Camera",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

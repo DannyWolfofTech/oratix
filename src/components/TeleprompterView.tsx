@@ -38,6 +38,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [cameraBlockedOpen, setCameraBlockedOpen] = useState(false);
   const [showHowToFix, setShowHowToFix] = useState(false);
   const [blackScreenDetected, setBlackScreenDetected] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<"idle" | "asking" | "granted" | "denied" | "notfound">("idle");
   const blackScreenCheckRef = useRef<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -198,8 +199,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       toast.error(t("cameraNotAvailable"));
       console.error("mediaDevices API not available – possibly blocked by Permissions-Policy or insecure context");
+      setPermissionStatus("denied");
       return;
     }
+    setPermissionStatus("asking");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -207,12 +210,18 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       });
       setCameraStream(stream);
       setBlackScreenDetected(false);
+      setPermissionStatus("granted");
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) {
       console.error("Camera error:", err);
-      if (err instanceof Error && (err.name === "NotAllowedError" || err.name === "NotFoundError")) {
+      if (err instanceof Error && err.name === "NotAllowedError") {
+        setPermissionStatus("denied");
         setCameraBlockedOpen(true);
+      } else if (err instanceof Error && err.name === "NotFoundError") {
+        setPermissionStatus("notfound");
+        toast.error(t("permNotFoundBanner"), { duration: 8000 });
       } else {
+        setPermissionStatus("denied");
         toast.error(t("recordingError"));
       }
     }
@@ -502,6 +511,23 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </div>
       )}
 
+      {/* Permission denied/notfound banner */}
+      {!cameraStream && (permissionStatus === "denied" || permissionStatus === "notfound") && (
+        <div className="fixed top-0 left-0 right-0 z-[150] bg-destructive text-destructive-foreground text-sm font-semibold text-center px-4 py-3 shadow-lg flex items-center justify-center gap-3 flex-wrap"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span>{permissionStatus === "denied" ? t("permDeniedBanner") : t("permNotFoundBanner")}</span>
+          {permissionStatus === "denied" && (
+            <button
+              onClick={() => setCameraBlockedOpen(true)}
+              className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-sm font-semibold transition-colors shrink-0"
+            >
+              {t("howToFix")}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Controls overlay */}
       <div
         onClick={(e) => e.stopPropagation()}
@@ -663,6 +689,20 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             playsInline
             className="w-full h-full object-cover"
           />
+          {/* Permission status dot - top right */}
+          <div className="absolute top-3 right-3 z-[35] flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1.5">
+            <div className={`w-2.5 h-2.5 rounded-full ${
+              permissionStatus === "granted" ? "bg-green-500 shadow-[0_0_6px_hsl(142_76%_36%)]" :
+              permissionStatus === "asking" ? "bg-yellow-400 animate-pulse" :
+              "bg-red-500 shadow-[0_0_6px_hsl(0_84%_60%)]"
+            }`} />
+            <span className="text-[10px] font-mono text-white/80">
+              {permissionStatus === "granted" ? t("permGranted") :
+               permissionStatus === "asking" ? t("permAsking") :
+               t("permBlocked")}
+            </span>
+          </div>
+
           {isRecording && (
             <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5">
               <div className="w-3 h-3 rounded-full bg-destructive animate-pulse border border-destructive-foreground" />

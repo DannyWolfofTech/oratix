@@ -301,6 +301,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setIsRecording(false);
     setPlaying(false);
     setCountdown(null);
+    setIsProcessing(true);
   }, []);
 
   const startRecordAndScroll = useCallback(async () => {

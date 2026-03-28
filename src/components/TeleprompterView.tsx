@@ -75,7 +75,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     if (videoRef.current && cameraStream) {
       videoRef.current.srcObject = cameraStream;
     }
-  }, [cameraStream]);
+  }, [cameraStream, cameraVisible]);
 
   // When startRecordAndScroll requested recording before the camera was open,
   // trigger it now that cameraStream is available.
@@ -276,7 +276,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     return () => {
       if (blackScreenCheckRef.current) clearInterval(blackScreenCheckRef.current);
     };
-  }, [cameraStream]);
+  }, [cameraStream, cameraVisible]);
 
   const resetCamera = useCallback(async () => {
     // Stop current stream
@@ -311,7 +311,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       setCameraStream(null);
       setIsRecording(false);
     }
-  }, [cameraStream]);
+  }, [cameraStream, cameraVisible]);
 
   // Countdown logic
   const startPlayWithCountdown = useCallback(() => {

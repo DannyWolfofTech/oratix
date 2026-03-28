@@ -69,14 +69,18 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
 
   // On mount: persist blob to IndexedDB, or recover from it
   useEffect(() => {
+    // Track the URL created in this effect run so the cleanup can always revoke it,
+    // regardless of whether setPreviewUrl has caused a re-render yet.
+    let localUrl: string | null = null;
+
     const init = async () => {
       if (blob && blob.size > 0) {
         setActiveBlob(blob);
         setActiveMime(mimeType);
         setDetectedDurationMs(initialDetectedDurationMs);
         await storeBlob(blob, mimeType, initialDetectedDurationMs);
-        const url = URL.createObjectURL(blob);
-        setPreviewUrl(url);
+        localUrl = URL.createObjectURL(blob);
+        setPreviewUrl(localUrl);
       } else {
         // Try to recover from IndexedDB
         const stored = await loadBlob();
@@ -84,17 +88,16 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
           setActiveBlob(stored.blob);
           setActiveMime(stored.mimeType);
           setDetectedDurationMs(stored.detectedDurationMs ?? null);
-          const url = URL.createObjectURL(stored.blob);
-          setPreviewUrl(url);
+          localUrl = URL.createObjectURL(stored.blob);
+          setPreviewUrl(localUrl);
         }
       }
     };
     init();
 
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (localUrl) URL.revokeObjectURL(localUrl);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blob, initialDetectedDurationMs, mimeType]);
 
   useEffect(() => {
@@ -152,7 +155,7 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
     toast.success(t("reviewSaveSuccess"), { duration: 10000 });
     setSaving(false);
     onClose();
-  }, [activeBlob, activeMime, getFileName, t, onClose]);
+  }, [activeBlob, activeMime, detectedDurationMs, getFileName, t, onClose]);
 
   // Share to apps (Drive, etc.)
   const handleSave = useCallback(async () => {
@@ -169,8 +172,8 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
         onClose();
         return;
       }
-    } catch (err: any) {
-      if (err?.name === "AbortError") {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
         toast.info(t("shareCancelled"));
       }
     }

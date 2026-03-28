@@ -4,7 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import ReviewRecordingModal from "@/components/ReviewRecordingModal";
+import ReviewRecordingModal, { storeBlob, loadBlob } from "@/components/ReviewRecordingModal";
 import { finalizeRecordingBlob, getPreferredRecordingMimeType, waitForFinalizationWindow } from "@/lib/recording";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
   const pendingRecordRef = useRef(false);
+  // Used by startRecordAndScroll to kick off recording once the camera stream is available.
+  const pendingCameraRecordRef = useRef(false);
   const requestDataIntervalRef = useRef<number | null>(null);
 
   const clearRequestDataInterval = useCallback(() => {
@@ -68,12 +70,21 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const isTouchingRef = useRef(isTouching);
   useEffect(() => { isTouchingRef.current = isTouching; }, [isTouching]);
 
-  // Assign srcObject whenever cameraStream or visibility changes
+  // Assign srcObject whenever cameraStream changes
   useEffect(() => {
     if (videoRef.current && cameraStream) {
       videoRef.current.srcObject = cameraStream;
     }
-  }, [cameraStream, cameraVisible]);
+  }, [cameraStream]);
+
+  // When startRecordAndScroll requested recording before the camera was open,
+  // trigger it now that cameraStream is available.
+  useEffect(() => {
+    if (cameraStream && pendingCameraRecordRef.current) {
+      pendingCameraRecordRef.current = false;
+      startRecording();
+    }
+  }, [cameraStream, startRecording]);
 
   // Show Back to Top when paused and not at top
   useEffect(() => {
@@ -317,7 +328,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     if (!mimeType) { toast.error(t("recordingError")); return; }
     console.log("[Recording] Using codec:", mimeType);
 
-    let recorderOptions: MediaRecorderOptions = { mimeType };
+    const recorderOptions: MediaRecorderOptions = { mimeType };
     // Set a reasonable bitrate for mobile devices
     try {
       recorderOptions.videoBitsPerSecond = 2_500_000; // 2.5 Mbps
@@ -338,12 +349,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       if (rawBlob.size === 0) { toast.error(t("recordingError")); setProcessingStage(null); return; }
 
       const duration = Date.now() - recordingStartRef.current;
-      const durationForMetadataMs = Math.max(duration - 3000, 1000);
+      // recordingStartRef is set after the countdown, so `duration` is already the
+      // true recording length — no need to subtract the countdown period again.
+      const durationForMetadataMs = Math.max(duration, 1000);
       setProcessingStage("finalizing");
 
       const finalize = async (blob: Blob, detectedDurationMs: number | null) => {
         try {
-          const { storeBlob } = await import("@/components/ReviewRecordingModal");
           await storeBlob(blob, mimeType, detectedDurationMs);
         } catch { /* best effort */ }
         setProcessingStage(null);
@@ -423,8 +435,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   }, [clearRequestDataInterval]);
 
   const startRecordAndScroll = useCallback(async () => {
-    if (!cameraStream) await openCamera();
-    startRecording();
+    if (!cameraStream) {
+      // Set the flag BEFORE awaiting; the useEffect above will call startRecording()
+      // once cameraStream state is set, avoiding the stale-closure race condition.
+      pendingCameraRecordRef.current = true;
+      await openCamera();
+    } else {
+      startRecording();
+    }
   }, [cameraStream, openCamera, startRecording]);
 
   // Cleanup camera on unmount
@@ -441,7 +459,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   useEffect(() => {
     const recover = async () => {
       if (reviewBlob) return; // already have one
-      const { loadBlob } = await import("@/components/ReviewRecordingModal");
       const stored = await loadBlob();
       if (stored && stored.blob.size > 0) {
         setReviewBlob(stored.blob);
@@ -464,9 +481,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       return;
     }
     if (!playing) {
-      // Paused: freeze accumulated time
-      timerAccumulatedRef.current = recordingElapsed;
-      timerLastTickRef.current = 0;
+      // Paused: accumulate from refs so we don't need recordingElapsed in deps
+      // (adding it would restart the interval every second).
+      if (timerLastTickRef.current > 0) {
+        timerAccumulatedRef.current += Math.floor((Date.now() - timerLastTickRef.current) / 1000);
+        timerLastTickRef.current = 0;
+        setRecordingElapsed(timerAccumulatedRef.current);
+      }
       return;
     }
     // Running: start ticking from accumulated
@@ -490,13 +511,12 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const isFullscreenCamera = !!(cameraStream && cameraMode === "fullscreen");
   const isFraming = !!(cameraStream && !isRecording && !playing && countdown === null && cameraMode === "fullscreen");
 
-  // Warn users in Facebook/Messenger in-app browsers
+  // Warn users in any detected in-app browser (same set as the isWebView banner)
   useEffect(() => {
-    const ua = navigator.userAgent || "";
-    if (/FBAN|FBAV/i.test(ua)) {
+    if (isWebView) {
       toast.warning(t("inAppBrowserWarning"), { duration: 10000 });
     }
-  }, [t]);
+  }, [isWebView, t]);
 
   return (
     <div

@@ -1,4 +1,4 @@
-import { useLanguage } from "@/hooks/useLanguage";
+import { useLanguage, TranslationKey } from "@/hooks/useLanguage";
 import {
   Dialog,
   DialogContent,
@@ -7,16 +7,24 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Info, Zap, Mic, Activity, FlipHorizontal2, Video, Globe } from "lucide-react";
+import { Info, Zap, Mic, Activity, FlipHorizontal2, Video, Globe, type LucideIcon } from "lucide-react";
 
-const features = [
+interface FeatureItem {
+  icon: LucideIcon;
+  titleKey: TranslationKey;
+  descKey: TranslationKey;
+}
+
+const features: FeatureItem[] = [
   { icon: Zap, titleKey: "aboutFeature1Title", descKey: "aboutFeature1Desc" },
   { icon: Mic, titleKey: "aboutFeature2Title", descKey: "aboutFeature2Desc" },
   { icon: Activity, titleKey: "aboutFeature3Title", descKey: "aboutFeature3Desc" },
   { icon: FlipHorizontal2, titleKey: "aboutFeature4Title", descKey: "aboutFeature4Desc" },
   { icon: Video, titleKey: "aboutFeature5Title", descKey: "aboutFeature5Desc" },
   { icon: Globe, titleKey: "aboutFeature6Title", descKey: "aboutFeature6Desc" },
-] as const;
+];
+
+const howToKeys: TranslationKey[] = ["aboutHow1", "aboutHow2", "aboutHow3", "aboutHow4", "aboutHow5"];
 
 const AboutDialog = () => {
   const { t } = useLanguage();
@@ -43,8 +51,8 @@ const AboutDialog = () => {
                 <Icon className="w-4 h-4 text-foreground" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold">{t(titleKey as any)}</h3>
-                <p className="text-xs text-muted-foreground">{t(descKey as any)}</p>
+                <h3 className="text-sm font-semibold">{t(titleKey)}</h3>
+                <p className="text-xs text-muted-foreground">{t(descKey)}</p>
               </div>
             </div>
           ))}
@@ -53,8 +61,8 @@ const AboutDialog = () => {
         <div className="mt-5 pt-4 border-t border-border">
           <h3 className="text-sm font-semibold mb-2">{t("aboutHowTitle")}</h3>
           <div className="space-y-1">
-            {(["aboutHow1", "aboutHow2", "aboutHow3", "aboutHow4", "aboutHow5"] as const).map((key) => (
-              <p key={key} className="text-xs text-muted-foreground">{t(key as any)}</p>
+            {howToKeys.map((key) => (
+              <p key={key} className="text-xs text-muted-foreground">{t(key)}</p>
             ))}
           </div>
         </div>

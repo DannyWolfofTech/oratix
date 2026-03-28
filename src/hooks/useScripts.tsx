@@ -44,18 +44,14 @@ export function useScripts() {
   }, []);
 
   const updateScript = useCallback((id: string, title: string, content: string): Script | null => {
-    let updated: Script | null = null;
-    setScripts((prev) =>
-      prev.map((s) => {
-        if (s.id === id) {
-          updated = { ...s, title, content, updated_at: new Date().toISOString() };
-          return updated;
-        }
-        return s;
-      })
-    );
+    // Build the result synchronously from the current scripts snapshot so the
+    // caller always gets the updated object, regardless of React's batch timing.
+    const existing = scripts.find((s) => s.id === id);
+    if (!existing) return null;
+    const updated: Script = { ...existing, title, content, updated_at: new Date().toISOString() };
+    setScripts((prev) => prev.map((s) => (s.id === id ? updated : s)));
     return updated;
-  }, []);
+  }, [scripts]);
 
   const deleteScript = useCallback((id: string) => {
     setScripts((prev) => prev.filter((s) => s.id !== id));

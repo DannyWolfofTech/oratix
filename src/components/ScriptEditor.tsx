@@ -22,6 +22,10 @@ const ScriptEditor = ({ script, onSave, onPlay, isSaving }: ScriptEditorProps) =
       setTitle(script.title);
       setContent(script.content);
     }
+    // Only re-sync when the user switches to a different script (by id).
+    // Omitting script.title / script.content is intentional: including them would
+    // reset the editor fields on every external save, discarding unsaved edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [script?.id]);
 
   const handleContentChange = (newContent: string) => {

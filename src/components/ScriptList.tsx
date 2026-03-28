@@ -2,7 +2,7 @@ import { Script } from "@/hooks/useScripts";
 import { AlignLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { ro, enUS } from "date-fns/locale";
+import { ro } from "date-fns/locale";
 import { useLanguage } from "@/hooks/useLanguage";
 
 interface ScriptListProps {
@@ -14,8 +14,8 @@ interface ScriptListProps {
 }
 
 const ScriptList = ({ scripts, activeId, onSelect, onDelete, onCreate }: ScriptListProps) => {
-  const { t, lang } = useLanguage();
-  const dateLocale = lang === "ro" ? ro : enUS;
+  const { t } = useLanguage();
+  const dateLocale = ro;
 
   return (
     <div className="flex flex-col">
@@ -33,10 +33,14 @@ const ScriptList = ({ scripts, activeId, onSelect, onDelete, onCreate }: ScriptL
           <p className="text-base font-medium text-muted-foreground text-center py-8">{t("noScripts")}</p>
         )}
         {scripts.map((script) => (
-          <button
+          // div + role="button" avoids nesting <button> inside <button> (invalid HTML)
+          <div
             key={script.id}
+            role="button"
+            tabIndex={0}
             onClick={() => onSelect(script)}
-            className={`w-full text-left p-4 rounded-xl border transition-all group ${
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(script); } }}
+            className={`w-full text-left p-4 rounded-xl border transition-all group cursor-pointer ${
               activeId === script.id
                 ? "bg-secondary border-border text-foreground"
                 : "bg-card border-border/50 hover:bg-secondary/50 hover:border-border"
@@ -59,7 +63,7 @@ const ScriptList = ({ scripts, activeId, onSelect, onDelete, onCreate }: ScriptL
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
-          </button>
+          </div>
         ))}
       </div>
     </div>

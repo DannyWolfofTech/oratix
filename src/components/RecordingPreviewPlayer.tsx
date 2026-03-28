@@ -104,7 +104,7 @@ const RecordingPreviewPlayer = ({ src, detectedDurationMs }: RecordingPreviewPla
       video.removeEventListener("play", syncCurrentTime);
       video.removeEventListener("ended", handleEnded);
     };
-  }, [detectedDurationSeconds]);
+  }, [src, detectedDurationSeconds]);
 
   const effectiveDuration = Math.max(resolvedDuration, detectedDurationSeconds, currentTime, 0);
 

@@ -6,13 +6,11 @@ import { writeFileSync, mkdirSync } from "fs";
 import { randomBytes } from "crypto";
 
 function versionPlugin() {
-  let buildId: string;
+  // Generate once so the injected client value and version.json always match.
+  const buildId = randomBytes(8).toString("hex");
   return {
     name: "version-plugin",
-    buildStart() {
-      buildId = randomBytes(8).toString("hex");
-    },
-    writeBundle(options: any) {
+    writeBundle(options: { dir?: string }) {
       const outDir = options.dir || "dist";
       try {
         mkdirSync(outDir, { recursive: true });
@@ -20,8 +18,7 @@ function versionPlugin() {
       } catch { /* ignore */ }
     },
     config() {
-      const id = randomBytes(8).toString("hex");
-      return { define: { "import.meta.env.VITE_BUILD_ID": JSON.stringify(id) } };
+      return { define: { "import.meta.env.VITE_BUILD_ID": JSON.stringify(buildId) } };
     },
   };
 }

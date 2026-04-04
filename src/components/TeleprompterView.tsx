@@ -409,7 +409,16 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     startPlayWithCountdown();
   }, [cameraStream, startPlayWithCountdown]);
 
-  const stopRecording = useCallback(() => {
+  // When startRecordAndScroll requested recording before the camera was open,
+  // trigger it now that cameraStream is available.
+  useEffect(() => {
+    if (cameraStream && pendingCameraRecordRef.current) {
+      pendingCameraRecordRef.current = false;
+      startRecording();
+    }
+  }, [cameraStream, startRecording]);
+
+
     pendingRecordRef.current = false;
     const wasRecording = mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive";
     if (wasRecording) {

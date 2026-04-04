@@ -418,7 +418,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     }
   }, [cameraStream, startRecording]);
 
-
+  const stopRecording = useCallback(() => {
     pendingRecordRef.current = false;
     const wasRecording = mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive";
     if (wasRecording) {

@@ -77,14 +77,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     }
   }, [cameraStream, cameraVisible]);
 
-  // When startRecordAndScroll requested recording before the camera was open,
-  // trigger it now that cameraStream is available.
-  useEffect(() => {
-    if (cameraStream && pendingCameraRecordRef.current) {
-      pendingCameraRecordRef.current = false;
-      startRecording();
-    }
-  }, [cameraStream, startRecording]);
+  // Moved: pendingCameraRecord effect is placed after startRecording declaration
 
   // Show Back to Top when paused and not at top
   useEffect(() => {
@@ -415,6 +408,15 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     pendingRecordRef.current = true;
     startPlayWithCountdown();
   }, [cameraStream, startPlayWithCountdown]);
+
+  // When startRecordAndScroll requested recording before the camera was open,
+  // trigger it now that cameraStream is available.
+  useEffect(() => {
+    if (cameraStream && pendingCameraRecordRef.current) {
+      pendingCameraRecordRef.current = false;
+      startRecording();
+    }
+  }, [cameraStream, startRecording]);
 
   const stopRecording = useCallback(() => {
     pendingRecordRef.current = false;

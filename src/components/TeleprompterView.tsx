@@ -118,7 +118,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       lastTime = now;
       if (scrollRef.current && playingRef.current && !isTouchingRef.current) {
         const lineH = fontSizeRef.current * 1.5;
-        const pxPerMs = (speedRef.current * lineH) / 2500;
+        const pxPerMs = (Math.pow(speedRef.current, 1.5) * lineH) / 1500;
         scrollRef.current.scrollTop += pxPerMs * delta;
       }
       animRef.current = requestAnimationFrame(scroll);
@@ -304,7 +304,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       setCameraStream(null);
       setIsRecording(false);
     }
-  }, [cameraStream, cameraVisible]);
+  }, [cameraStream]);
 
   // Countdown logic
   const startPlayWithCountdown = useCallback(() => {

@@ -704,9 +704,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           translate="no"
           className={`notranslate fixed overflow-hidden shadow-2xl transition-all duration-500 ease-in-out ${
             cameraMode === "fullscreen"
-              ? "inset-0 z-50 w-full h-full bg-black rounded-none border-none"
-              : "top-3 right-3 z-50 rounded-2xl ring-1 ring-white/10 cursor-pointer w-40 h-[213px] sm:w-64 sm:h-[341px]"
+              ? "inset-0 z-[20] w-full h-full bg-black rounded-none border-none"
+              : "top-3 right-3 z-[110] rounded-2xl ring-1 ring-white/10 cursor-pointer w-40 h-[213px] sm:w-64 sm:h-[341px]"
           }`}
+          style={cameraMode === "fullscreen" ? { height: "100svh" } : undefined}
           title={cameraMode === "corner" ? (t("togglePreview") || "Hide preview") : undefined}
         >
           <video

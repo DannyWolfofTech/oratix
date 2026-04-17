@@ -129,6 +129,26 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
     return `TelePrompt_Recording_${timestamp}.${ext}`;
   }, [activeMime]);
 
+  // For sharing: Messenger and other apps recognize .mp4 better than .webm
+  const getShareFileName = useCallback(() => {
+    return `oratix-video.mp4`;
+  }, []);
+
+  // Detect if the browser can share files (not just URLs/text)
+  const [canShareFiles, setCanShareFiles] = useState(false);
+  useEffect(() => {
+    if (!activeBlob || typeof navigator === "undefined" || !navigator.canShare) {
+      setCanShareFiles(false);
+      return;
+    }
+    try {
+      const probeFile = new File([activeBlob], getShareFileName(), { type: "video/mp4" });
+      setCanShareFiles(navigator.canShare({ files: [probeFile] }));
+    } catch {
+      setCanShareFiles(false);
+    }
+  }, [activeBlob, getShareFileName]);
+
   // Direct download to device
   const handleDownload = useCallback(async () => {
     if (!activeBlob) return;
@@ -157,28 +177,40 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
     onClose();
   }, [activeBlob, activeMime, detectedDurationMs, getFileName, t, onClose]);
 
-  // Share to apps (Drive, etc.)
+  // Share to apps (Drive, Messenger, etc.)
   const handleSave = useCallback(async () => {
     if (!activeBlob) return;
     setSaving(true);
-    const fileName = getFileName();
+    // Force .mp4 extension + video/mp4 mime so Messenger recognizes the codec immediately
+    const fileName = getShareFileName();
     try {
-      const file = new File([activeBlob], fileName, { type: activeMime });
+      const file = new File([activeBlob], fileName, { type: "video/mp4" });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: "TelePrompt Recording" });
+        await navigator.share({ files: [file], title: "Oratix Recording" });
         toast.success(t("recordingSaved"), { duration: 6000 });
         await clearBlob();
         setSaving(false);
         onClose();
         return;
       }
+      // canShare returned false — show Messenger safety hint
+      toast.error(
+        "Messenger are uneori erori. Descarcă videoul în telefon și trimite-l direct din Galerie!",
+        { duration: 8000 }
+      );
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         toast.info(t("shareCancelled"));
+      } else {
+        // Permission / NotAllowedError on Android/Messenger
+        toast.error(
+          "Messenger are uneori erori. Descarcă videoul în telefon și trimite-l direct din Galerie!",
+          { duration: 8000 }
+        );
       }
     }
     setSaving(false);
-  }, [activeBlob, activeMime, getFileName, t, onClose]);
+  }, [activeBlob, getShareFileName, t, onClose]);
 
   const handleDiscard = useCallback(async () => {
     await clearBlob();
@@ -233,8 +265,8 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
             {t("downloadVideo")}
           </button>
 
-          {/* Share to apps (Drive, etc.) */}
-          {navigator.share && (
+          {/* Share to apps (Drive, Messenger, etc.) — only if browser can share files */}
+          {canShareFiles && (
             <button
               onClick={handleSave}
               disabled={saving || !activeBlob}

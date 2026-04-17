@@ -779,7 +779,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {/* Scrolling text */}
       <div
         ref={scrollRef}
-        className={`flex-1 overflow-hidden fade-mask relative z-[100] transition-opacity duration-300 ${isFraming ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+        className={`flex-1 overflow-hidden fade-mask relative z-[100] transition-opacity duration-300 ${isFraming ? "opacity-0 pointer-events-none" : "opacity-100"} ${isFullscreenCamera ? "pointer-events-none" : ""}`}
         style={{ scrollBehavior: 'auto' }}
         onTouchStart={() => setIsTouching(true)}
         onTouchEnd={() => setIsTouching(false)}
@@ -788,7 +788,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         onMouseLeave={() => setIsTouching(false)}
       >
         <div
-          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[120vh] ${isFullscreenCamera ? "bg-black/30 backdrop-blur-[2px] rounded-2xl" : ""}`}
+          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[20vh] pb-[140vh] ${isFullscreenCamera ? "bg-black/30 backdrop-blur-[2px] rounded-2xl" : ""}`}
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p

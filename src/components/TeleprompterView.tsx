@@ -117,8 +117,9 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       const delta = now - lastTime;
       lastTime = now;
       if (scrollRef.current && playingRef.current && !isTouchingRef.current) {
+        // 1x speed = one line every 2.5s (line height = fontSize * 1.5)
         const lineH = fontSizeRef.current * 1.5;
-        const pxPerMs = (Math.pow(speedRef.current, 1.5) * lineH) / 1500;
+        const pxPerMs = (speedRef.current * lineH) / 2500;
         scrollRef.current.scrollTop += pxPerMs * delta;
       }
       animRef.current = requestAnimationFrame(scroll);

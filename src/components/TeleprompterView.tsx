@@ -571,7 +571,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                     setPlaying(false);
                   }
                 }}
-                className="p-3 rounded-full bg-foreground text-background hover:opacity-80 transition"
+                className="p-3 min-w-[44px] min-h-[44px] rounded-full bg-foreground text-background hover:opacity-80 transition flex items-center justify-center"
               >
                 {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </button>

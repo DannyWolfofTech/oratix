@@ -647,7 +647,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               {!cameraStream ? (
                 <button
                   onClick={openCamera}
-                  className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
+                  translate="no"
+                  className="notranslate flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
                 >
                   <Video className="w-4 h-4" />
                   {t("openCamera")}
@@ -684,7 +685,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             {cameraStream && !isRecording && (
               <button
                 onClick={startRecording}
-                className="flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-full text-sm font-semibold bg-destructive text-destructive-foreground hover:opacity-90 shadow-[0_0_15px_hsl(var(--destructive)/0.5)] transition-colors"
+                translate="no"
+                className="notranslate flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-full text-sm font-semibold bg-destructive text-destructive-foreground hover:opacity-90 shadow-[0_0_15px_hsl(var(--destructive)/0.5)] transition-colors"
               >
                 <Video className="w-5 h-5" />
                 {t("startRecording")}
@@ -698,10 +700,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {cameraStream && cameraVisible && (
         <div
           onClick={(e) => { e.stopPropagation(); if (cameraMode === "fullscreen") handleTap(); else setCameraVisible(false); }}
-          className={`fixed overflow-hidden shadow-2xl transition-all duration-500 ease-in-out ${
+          translate="no"
+          className={`notranslate fixed overflow-hidden shadow-2xl transition-all duration-500 ease-in-out ${
             cameraMode === "fullscreen"
-              ? "inset-0 z-[10] w-full h-full bg-black rounded-none border-none"
-              : "top-3 right-3 z-[20] rounded-2xl ring-1 ring-white/10 cursor-pointer w-40 h-[213px] sm:w-64 sm:h-[341px]"
+              ? "inset-0 z-50 w-full h-full bg-black rounded-none border-none"
+              : "top-3 right-3 z-50 rounded-2xl ring-1 ring-white/10 cursor-pointer w-40 h-[213px] sm:w-64 sm:h-[341px]"
           }`}
           title={cameraMode === "corner" ? (t("togglePreview") || "Hide preview") : undefined}
         >
@@ -710,7 +713,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
             autoPlay
             muted
             playsInline
-            className="w-full h-full object-cover"
+            translate="no"
+            className="notranslate w-full h-full object-cover"
           />
           {/* Permission status dot - top right */}
           <div className="absolute top-3 right-3 z-[35] flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1.5">

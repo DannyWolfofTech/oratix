@@ -555,7 +555,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {/* Controls overlay */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`fixed top-0 left-0 right-0 z-[100] p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
+        className={`fixed top-0 left-0 right-0 z-[110] p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
@@ -571,7 +571,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                     setPlaying(false);
                   }
                 }}
-                className="p-3 rounded-full bg-foreground text-background hover:opacity-80 transition"
+                className="p-3 min-w-[44px] min-h-[44px] rounded-full bg-foreground text-background hover:opacity-80 transition flex items-center justify-center"
               >
                 {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </button>
@@ -582,7 +582,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 if (reviewBlob) return;
                 onClose();
               }}
-              className="p-3 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-destructive transition"
+              className="p-3 min-w-[44px] min-h-[44px] rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-destructive transition flex items-center justify-center"
             >
               <X className="w-5 h-5" />
             </button>
@@ -649,7 +649,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 <button
                   onClick={openCamera}
                   translate="no"
-                  className="notranslate flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
+                  className="notranslate flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
                 >
                   <Video className="w-4 h-4" />
                   {t("openCamera")}
@@ -658,14 +658,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 <>
                   <button
                     onClick={() => setCameraMode((m) => m === "fullscreen" ? "corner" : "fullscreen")}
-                    className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
+                    className="flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
                   >
                     {cameraMode === "fullscreen" ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
                     {cameraMode === "fullscreen" ? t("cornerView") : t("fullscreenView")}
                   </button>
                   <button
                     onClick={closeCamera}
-                    className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
+                    className="flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
                   >
                     <VideoOff className="w-4 h-4" />
                     {t("closeCamera")}
@@ -674,7 +674,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               ) : (
                 <button
                   onClick={stopRecording}
-                  className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium bg-destructive text-destructive-foreground animate-pulse shadow-[0_0_15px_hsl(var(--destructive)/0.5)] transition-colors"
+                  className="flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-full text-sm font-medium bg-destructive text-destructive-foreground animate-pulse shadow-[0_0_15px_hsl(var(--destructive)/0.5)] transition-colors"
                 >
                   <VideoOff className="w-4 h-4" />
                   {t("stopRecording")}
@@ -687,7 +687,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               <button
                 onClick={startRecording}
                 translate="no"
-                className="notranslate flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-full text-sm font-semibold bg-destructive text-destructive-foreground hover:opacity-90 shadow-[0_0_15px_hsl(var(--destructive)/0.5)] transition-colors"
+                className="notranslate flex items-center justify-center gap-2 w-full px-5 py-3.5 min-h-[44px] rounded-full text-sm font-semibold bg-destructive text-destructive-foreground hover:opacity-90 shadow-[0_0_15px_hsl(var(--destructive)/0.5)] transition-colors"
               >
                 <Video className="w-5 h-5" />
                 {t("startRecording")}
@@ -792,7 +792,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p
-            className="font-sans font-medium whitespace-pre-wrap"
+            className={`font-sans font-medium whitespace-pre-wrap ${isFullscreenCamera ? "pointer-events-auto" : ""}`}
             style={{
               color: textColor === "red"
                 ? "hsl(0 85% 60%)"

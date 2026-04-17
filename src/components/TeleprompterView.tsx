@@ -649,7 +649,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 <button
                   onClick={openCamera}
                   translate="no"
-                  className="notranslate flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
+                  className="notranslate flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
                 >
                   <Video className="w-4 h-4" />
                   {t("openCamera")}
@@ -658,14 +658,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 <>
                   <button
                     onClick={() => setCameraMode((m) => m === "fullscreen" ? "corner" : "fullscreen")}
-                    className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
+                    className="flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
                   >
                     {cameraMode === "fullscreen" ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
                     {cameraMode === "fullscreen" ? t("cornerView") : t("fullscreenView")}
                   </button>
                   <button
                     onClick={closeCamera}
-                    className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
+                    className="flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition-colors"
                   >
                     <VideoOff className="w-4 h-4" />
                     {t("closeCamera")}
@@ -674,7 +674,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               ) : (
                 <button
                   onClick={stopRecording}
-                  className="flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium bg-destructive text-destructive-foreground animate-pulse shadow-[0_0_15px_hsl(var(--destructive)/0.5)] transition-colors"
+                  className="flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-full text-sm font-medium bg-destructive text-destructive-foreground animate-pulse shadow-[0_0_15px_hsl(var(--destructive)/0.5)] transition-colors"
                 >
                   <VideoOff className="w-4 h-4" />
                   {t("stopRecording")}
@@ -687,7 +687,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               <button
                 onClick={startRecording}
                 translate="no"
-                className="notranslate flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-full text-sm font-semibold bg-destructive text-destructive-foreground hover:opacity-90 shadow-[0_0_15px_hsl(var(--destructive)/0.5)] transition-colors"
+                className="notranslate flex items-center justify-center gap-2 w-full px-5 py-3.5 min-h-[44px] rounded-full text-sm font-semibold bg-destructive text-destructive-foreground hover:opacity-90 shadow-[0_0_15px_hsl(var(--destructive)/0.5)] transition-colors"
               >
                 <Video className="w-5 h-5" />
                 {t("startRecording")}

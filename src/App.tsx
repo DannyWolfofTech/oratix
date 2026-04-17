@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/hooks/useLanguage";
 import { useVersionCheck } from "@/hooks/useVersionCheck";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 const TranslationWarning = () => {
@@ -64,6 +65,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <AppInner />
+        <InstallPrompt />
       </div>
     </TooltipProvider>
   </LanguageProvider>

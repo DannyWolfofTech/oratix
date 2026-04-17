@@ -582,7 +582,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 if (reviewBlob) return;
                 onClose();
               }}
-              className="p-3 rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-destructive transition"
+              className="p-3 min-w-[44px] min-h-[44px] rounded-full bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground hover:text-destructive transition flex items-center justify-center"
             >
               <X className="w-5 h-5" />
             </button>

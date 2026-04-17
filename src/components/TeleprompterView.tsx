@@ -524,6 +524,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   return (
     <div
       className="fixed inset-0 z-50 bg-teleprompter-bg flex flex-col"
+      style={{ height: "100svh" }}
       onMouseMove={handleMouseMove}
       onClick={handleTap}
     >

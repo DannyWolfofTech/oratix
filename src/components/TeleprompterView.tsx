@@ -524,6 +524,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   return (
     <div
       className="fixed inset-0 z-50 bg-teleprompter-bg flex flex-col"
+      style={{ height: "100svh" }}
       onMouseMove={handleMouseMove}
       onClick={handleTap}
     >
@@ -703,9 +704,10 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           translate="no"
           className={`notranslate fixed overflow-hidden shadow-2xl transition-all duration-500 ease-in-out ${
             cameraMode === "fullscreen"
-              ? "inset-0 z-50 w-full h-full bg-black rounded-none border-none"
-              : "top-3 right-3 z-50 rounded-2xl ring-1 ring-white/10 cursor-pointer w-40 h-[213px] sm:w-64 sm:h-[341px]"
+              ? "inset-0 z-[20] w-full h-full bg-black rounded-none border-none"
+              : "top-3 right-3 z-[110] rounded-2xl ring-1 ring-white/10 cursor-pointer w-40 h-[213px] sm:w-64 sm:h-[341px]"
           }`}
+          style={cameraMode === "fullscreen" ? { height: "100svh" } : undefined}
           title={cameraMode === "corner" ? (t("togglePreview") || "Hide preview") : undefined}
         >
           <video
@@ -777,7 +779,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {/* Scrolling text */}
       <div
         ref={scrollRef}
-        className={`flex-1 overflow-hidden fade-mask relative z-[25] transition-opacity duration-300 ${isFraming ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+        className={`flex-1 overflow-hidden fade-mask relative z-[100] transition-opacity duration-300 ${isFraming ? "opacity-0 pointer-events-none" : "opacity-100"}`}
         style={{ scrollBehavior: 'auto' }}
         onTouchStart={() => setIsTouching(true)}
         onTouchEnd={() => setIsTouching(false)}
@@ -786,7 +788,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         onMouseLeave={() => setIsTouching(false)}
       >
         <div
-          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[120vh] ${isFullscreenCamera ? "bg-black/40 backdrop-blur-sm rounded-2xl" : ""}`}
+          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[10vh] pb-[120vh] ${isFullscreenCamera ? "bg-black/30 backdrop-blur-[2px] rounded-2xl" : ""}`}
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p

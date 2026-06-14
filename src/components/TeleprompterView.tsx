@@ -14,11 +14,34 @@ interface TeleprompterViewProps {
   onClose: () => void;
 }
 
+// Layout / scrolling
+const MOBILE_BREAKPOINT_PX = 768;
+const MOBILE_FONT_SIZE_PX = 28;
+const DESKTOP_FONT_SIZE_PX = 42;
+const LINE_HEIGHT_RATIO = 1.5;
+// At 1x speed the text advances one line every this many milliseconds.
+const SCROLL_MS_PER_LINE_AT_1X = 2500;
+const BACK_TO_TOP_THRESHOLD_PX = 100;
+const SCROLL_END_THRESHOLD_PX = 50;
+
+// Black-screen detection (samples a tiny downscaled frame of the camera feed)
+const BLACK_SCREEN_SAMPLE_SIZE = 16;
+const BLACK_SCREEN_BRIGHTNESS_THRESHOLD = 5;
+const BLACK_SCREEN_CHECK_INTERVAL_MS = 500;
+const BLACK_SCREEN_MAX_CHECKS = 10;
+const BLACK_SCREEN_MIN_CHECKS_BEFORE_FLAG = 8;
+
+// Recording bitrates
+const VIDEO_BITS_PER_SECOND = 2_500_000; // 2.5 Mbps
+const AUDIO_BITS_PER_SECOND = 128_000;
+
 const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const isMobile = useIsMobile();
   const { t } = useLanguage();
   const [speed, setSpeed] = useState(1.5);
-  const [fontSize, setFontSize] = useState(() => (window.innerWidth < 768 ? 28 : 42));
+  const [fontSize, setFontSize] = useState(() =>
+    window.innerWidth < MOBILE_BREAKPOINT_PX ? MOBILE_FONT_SIZE_PX : DESKTOP_FONT_SIZE_PX
+  );
   const [playing, setPlaying] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showControls, setShowControls] = useState(true);
@@ -43,7 +66,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const speedRef = useRef(speed);
   const fontSizeRef = useRef(fontSize);
   const playingRef = useRef(playing);
@@ -52,8 +75,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
   const pendingRecordRef = useRef(false);
-  // Used by startRecordAndScroll to kick off recording once the camera stream is available.
-  const pendingCameraRecordRef = useRef(false);
   const requestDataIntervalRef = useRef<number | null>(null);
 
   const clearRequestDataInterval = useCallback(() => {
@@ -70,6 +91,11 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const isTouchingRef = useRef(isTouching);
   useEffect(() => { isTouchingRef.current = isTouching; }, [isTouching]);
 
+  // Mirror the camera stream into a ref so the unmount cleanup (which captures
+  // its deps once) can always reach the *current* stream to stop its tracks.
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  useEffect(() => { cameraStreamRef.current = cameraStream; }, [cameraStream]);
+
   // Assign srcObject whenever cameraStream changes
   useEffect(() => {
     if (videoRef.current && cameraStream) {
@@ -81,7 +107,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
 
   // Show Back to Top when paused and not at top
   useEffect(() => {
-    if (!playing && scrollRef.current && scrollRef.current.scrollTop > 100) {
+    if (!playing && scrollRef.current && scrollRef.current.scrollTop > BACK_TO_TOP_THRESHOLD_PX) {
       setShowBackToTop(true);
     } else if (playing) {
       setShowBackToTop(false);
@@ -93,7 +119,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_END_THRESHOLD_PX;
       if (atBottom && playing) {
         setPlaying(false);
         setShowBackToTop(true);
@@ -117,9 +143,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       const delta = now - lastTime;
       lastTime = now;
       if (scrollRef.current && playingRef.current && !isTouchingRef.current) {
-        // 1x speed = one line every 2.5s (line height = fontSize * 1.5)
-        const lineH = fontSizeRef.current * 1.5;
-        const pxPerMs = (speedRef.current * lineH) / 2500;
+        const lineH = fontSizeRef.current * LINE_HEIGHT_RATIO;
+        const pxPerMs = (speedRef.current * lineH) / SCROLL_MS_PER_LINE_AT_1X;
         scrollRef.current.scrollTop += pxPerMs * delta;
       }
       animRef.current = requestAnimationFrame(scroll);
@@ -241,31 +266,30 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     }
     if (!canvasRef.current) canvasRef.current = document.createElement("canvas");
     const canvas = canvasRef.current;
-    canvas.width = 16;
-    canvas.height = 16;
+    canvas.width = BLACK_SCREEN_SAMPLE_SIZE;
+    canvas.height = BLACK_SCREEN_SAMPLE_SIZE;
     const ctx = canvas.getContext("2d");
     let checks = 0;
 
     blackScreenCheckRef.current = window.setInterval(() => {
       checks++;
       if (!videoRef.current || !ctx || !cameraStream) return;
-      ctx.drawImage(videoRef.current, 0, 0, 16, 16);
-      const data = ctx.getImageData(0, 0, 16, 16).data;
+      ctx.drawImage(videoRef.current, 0, 0, BLACK_SCREEN_SAMPLE_SIZE, BLACK_SCREEN_SAMPLE_SIZE);
+      const data = ctx.getImageData(0, 0, BLACK_SCREEN_SAMPLE_SIZE, BLACK_SCREEN_SAMPLE_SIZE).data;
       let totalBrightness = 0;
       for (let i = 0; i < data.length; i += 4) {
         totalBrightness += data[i] + data[i + 1] + data[i + 2];
       }
-      const avgBrightness = totalBrightness / (16 * 16 * 3);
-      if (avgBrightness < 5 && checks >= 8) {
+      const avgBrightness = totalBrightness / (BLACK_SCREEN_SAMPLE_SIZE * BLACK_SCREEN_SAMPLE_SIZE * 3);
+      if (avgBrightness < BLACK_SCREEN_BRIGHTNESS_THRESHOLD && checks >= BLACK_SCREEN_MIN_CHECKS_BEFORE_FLAG) {
         setBlackScreenDetected(true);
-      } else if (avgBrightness >= 5) {
+      } else if (avgBrightness >= BLACK_SCREEN_BRIGHTNESS_THRESHOLD) {
         setBlackScreenDetected(false);
       }
-      // Stop checking after 10 checks (~5 seconds)
-      if (checks >= 10 && blackScreenCheckRef.current) {
+      if (checks >= BLACK_SCREEN_MAX_CHECKS && blackScreenCheckRef.current) {
         clearInterval(blackScreenCheckRef.current);
       }
-    }, 500);
+    }, BLACK_SCREEN_CHECK_INTERVAL_MS);
 
     return () => {
       if (blackScreenCheckRef.current) clearInterval(blackScreenCheckRef.current);
@@ -325,8 +349,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     const recorderOptions: MediaRecorderOptions = { mimeType };
     // Set a reasonable bitrate for mobile devices
     try {
-      recorderOptions.videoBitsPerSecond = 2_500_000; // 2.5 Mbps
-      recorderOptions.audioBitsPerSecond = 128_000;
+      recorderOptions.videoBitsPerSecond = VIDEO_BITS_PER_SECOND;
+      recorderOptions.audioBitsPerSecond = AUDIO_BITS_PER_SECOND;
     } catch { /* ignore if unsupported */ }
 
     const recorder = new MediaRecorder(cameraStream, recorderOptions);
@@ -410,15 +434,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     startPlayWithCountdown();
   }, [cameraStream, startPlayWithCountdown]);
 
-  // When startRecordAndScroll requested recording before the camera was open,
-  // trigger it now that cameraStream is available.
-  useEffect(() => {
-    if (cameraStream && pendingCameraRecordRef.current) {
-      pendingCameraRecordRef.current = false;
-      startRecording();
-    }
-  }, [cameraStream, startRecording]);
-
   const stopRecording = useCallback(() => {
     pendingRecordRef.current = false;
     const wasRecording = mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive";
@@ -437,23 +452,18 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setCountdown(null);
   }, [clearRequestDataInterval]);
 
-  const startRecordAndScroll = useCallback(async () => {
-    if (!cameraStream) {
-      // Set the flag BEFORE awaiting; the useEffect above will call startRecording()
-      // once cameraStream state is set, avoiding the stale-closure race condition.
-      pendingCameraRecordRef.current = true;
-      await openCamera();
-    } else {
-      startRecording();
-    }
-  }, [cameraStream, openCamera, startRecording]);
-
-  // Cleanup camera on unmount
+  // Cleanup camera + recorder on unmount. Without stopping the tracks here,
+  // closing the teleprompter (X / Escape) while the camera is open leaves the
+  // device camera/mic indicator on.
   useEffect(() => {
     return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         clearRequestDataInterval();
         try { mediaRecorderRef.current.stop(); } catch { /* ignore */ }
+      }
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+        cameraStreamRef.current = null;
       }
     };
   }, [clearRequestDataInterval]);

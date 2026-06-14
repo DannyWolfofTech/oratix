@@ -3,10 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/hooks/useLanguage";
-import { useVersionCheck } from "@/hooks/useVersionCheck";
+import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import PwaUpdatePrompt from "@/components/PwaUpdatePrompt";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 const TranslationWarning = () => {
@@ -26,7 +28,10 @@ const TranslationWarning = () => {
     const observer = new MutationObserver(detect);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "lang"] });
     observer.observe(document.body, { attributes: true, childList: true, attributeFilter: ["class"] });
-    const interval = window.setInterval(detect, 2000);
+    // The MutationObserver above is the primary detector; this is a low-frequency
+    // safety-net poll for translate engines that mutate the DOM in ways the
+    // observer doesn't catch. 2s was needlessly busy for the app's lifetime.
+    const interval = window.setInterval(detect, 10000);
     return () => {
       observer.disconnect();
       window.clearInterval(interval);
@@ -46,7 +51,6 @@ const TranslationWarning = () => {
 };
 
 const AppInner = () => {
-  useVersionCheck();
   return (
     <BrowserRouter>
       <Routes>
@@ -58,17 +62,22 @@ const AppInner = () => {
 };
 
 const App = () => (
-  <LanguageProvider>
-    <TooltipProvider>
-      <div translate="no" className="notranslate">
-        <TranslationWarning />
-        <Toaster />
-        <Sonner />
-        <AppInner />
-        <InstallPrompt />
-      </div>
-    </TooltipProvider>
-  </LanguageProvider>
+  <ErrorBoundary>
+    <LanguageProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <div translate="no" className="notranslate">
+            <TranslationWarning />
+            <Toaster />
+            <Sonner />
+            <AppInner />
+            <InstallPrompt />
+            <PwaUpdatePrompt />
+          </div>
+        </TooltipProvider>
+      </AuthProvider>
+    </LanguageProvider>
+  </ErrorBoundary>
 );
 
 export default App;

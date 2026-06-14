@@ -103,6 +103,30 @@ const translations = {
   permBlocked: "Blocat",
   permDeniedBanner: "Acces Refuzat! 🔒 Te rugăm să permiți accesul la cameră din setările browserului pentru a înregistra.",
   permNotFoundBanner: "Cameră negăsită! 📷 Verifică dacă nicio altă aplicație nu folosește camera în acest moment.",
+  // Error boundary
+  errorTitle: "Ceva nu a mers bine",
+  errorDesc: "A apărut o eroare neașteptată. Reîncarcă pagina pentru a continua.",
+  errorReload: "Reîncarcă pagina",
+  // Recording share fallback
+  messengerError: "Messenger are uneori erori. Descarcă videoul în telefon și trimite-l direct din Galerie!",
+  // Install prompt
+  installCta: "Instalează Oratix pe ecranul tău",
+  installClose: "Închide",
+  installIosTitle: "Instalează Oratix pe iPhone",
+  installIosDesc: "Urmează acești pași în Safari pentru a adăuga Oratix pe ecranul de start:",
+  installIosStep1: "Apasă butonul Partajează din bara Safari.",
+  installIosStep2: "Selectează „Adaugă la ecran principal”.",
+  installIosStep3: "Confirmă apăsând „Adaugă”.",
+  // Auth UI
+  signInTitle: "Conectare / Sincronizare",
+  signInDesc: "Conectează-te pentru a-ți sincroniza scripturile pe toate dispozitivele.",
+  sendMagicLink: "Trimite linkul de conectare",
+  magicLinkSent: "Ți-am trimis un link de conectare pe email.",
+  authError: "Conectarea a eșuat. Încearcă din nou.",
+  syncedAccount: "Cont sincronizat",
+  // App update prompt
+  updateAvailable: "O versiune nouă este disponibilă.",
+  updateReload: "Reîncarcă",
 } as const;
 
 export type TranslationKey = keyof typeof translations;
@@ -116,7 +140,12 @@ const LanguageContext = createContext<LanguageContextType | null>(null);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const t = useCallback((key: TranslationKey) => {
-    return translations[key] || key;
+    const value = translations[key];
+    if (value === undefined) {
+      if (import.meta.env.DEV) console.warn(`[i18n] Missing translation for key: ${key}`);
+      return key;
+    }
+    return value;
   }, []);
 
   return (

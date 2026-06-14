@@ -2,6 +2,9 @@ import fixWebmDuration from "fix-webm-duration";
 
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
+// Upper bound for probing a blob's duration before giving up.
+const MEASURE_DURATION_TIMEOUT_MS = 8000;
+
 export interface FinalizedRecordingResult {
   blob: Blob;
   detectedDurationMs: number | null;
@@ -61,10 +64,18 @@ export const measureBlobDuration = async (blob: Blob): Promise<number | null> =>
     const media = document.createElement("video");
     let settled = false;
 
+    // Safety net: if neither `loadedmetadata` nor `error` ever fires (seen on
+    // some mobile browsers with malformed webm), settle anyway so the promise
+    // can't hang forever and leak the object URL / <video> element.
+    const timeoutId = window.setTimeout(() => finish(null), MEASURE_DURATION_TIMEOUT_MS);
+
     const finish = (duration: number | null) => {
       if (settled) return;
       settled = true;
+      window.clearTimeout(timeoutId);
       URL.revokeObjectURL(url);
+      media.removeAttribute("src");
+      media.load();
       resolve(duration && Number.isFinite(duration) && duration > 0 ? duration : null);
     };
 

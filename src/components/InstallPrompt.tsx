@@ -3,9 +3,11 @@ import { Download, X, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export const InstallPrompt = () => {
   const { canShow, isIos, promptInstall, dismiss } = useInstallPrompt();
+  const { t } = useLanguage();
   const [showIosHelp, setShowIosHelp] = useState(false);
 
   if (!canShow) return null;
@@ -28,14 +30,14 @@ export const InstallPrompt = () => {
             className="flex-1 rounded-full"
           >
             <Download className="h-4 w-4" />
-            Instalează Oratix pe ecranul tău
+            {t("installCta")}
           </Button>
           <Button
             onClick={dismiss}
             size="icon"
             variant="ghost"
             className="rounded-full shrink-0"
-            aria-label="Închide"
+            aria-label={t("installClose")}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -45,25 +47,23 @@ export const InstallPrompt = () => {
       <Dialog open={showIosHelp} onOpenChange={setShowIosHelp}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Instalează Oratix pe iPhone</DialogTitle>
-            <DialogDescription>
-              Urmează acești pași în Safari pentru a adăuga Oratix pe ecranul de start:
-            </DialogDescription>
+            <DialogTitle>{t("installIosTitle")}</DialogTitle>
+            <DialogDescription>{t("installIosDesc")}</DialogDescription>
           </DialogHeader>
           <ol className="space-y-3 text-sm text-foreground">
             <li className="flex items-start gap-3">
               <span className="font-semibold">1.</span>
               <span className="flex items-center gap-2">
-                Apasă butonul <Share className="inline h-4 w-4" /> <strong>Partajează</strong> din bara Safari.
+                <Share className="inline h-4 w-4 shrink-0" /> {t("installIosStep1")}
               </span>
             </li>
             <li className="flex items-start gap-3">
               <span className="font-semibold">2.</span>
-              <span>Selectează <strong>„Adaugă la ecran principal”</strong>.</span>
+              <span>{t("installIosStep2")}</span>
             </li>
             <li className="flex items-start gap-3">
               <span className="font-semibold">3.</span>
-              <span>Confirmă apăsând <strong>„Adaugă”</strong>.</span>
+              <span>{t("installIosStep3")}</span>
             </li>
           </ol>
         </DialogContent>

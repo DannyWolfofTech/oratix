@@ -5,6 +5,11 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+// iOS Safari exposes a non-standard `standalone` flag on navigator.
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean;
+}
+
 const DISMISSED_KEY = "oratix-install-dismissed";
 
 export const useInstallPrompt = () => {
@@ -23,9 +28,7 @@ export const useInstallPrompt = () => {
     // Detect standalone (already installed)
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
-      // iOS Safari
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window.navigator as any).standalone === true;
+      (window.navigator as NavigatorWithStandalone).standalone === true;
     setIsInstalled(standalone);
 
     // iOS detection (no beforeinstallprompt available)

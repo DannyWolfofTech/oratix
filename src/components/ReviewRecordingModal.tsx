@@ -199,10 +199,7 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
         return;
       }
       // canShare returned false — show Messenger safety hint
-      toast.error(
-        "Messenger are uneori erori. Descarcă videoul în telefon și trimite-l direct din Galerie!",
-        { duration: 8000 }
-      );
+      toast.error(t("messengerError"), { duration: 8000 });
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         toast.info(t("shareCancelled"));

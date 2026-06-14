@@ -7,6 +7,7 @@ import { useVersionCheck } from "@/hooks/useVersionCheck";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 const TranslationWarning = () => {
@@ -61,17 +62,19 @@ const AppInner = () => {
 };
 
 const App = () => (
-  <LanguageProvider>
-    <TooltipProvider>
-      <div translate="no" className="notranslate">
-        <TranslationWarning />
-        <Toaster />
-        <Sonner />
-        <AppInner />
-        <InstallPrompt />
-      </div>
-    </TooltipProvider>
-  </LanguageProvider>
+  <ErrorBoundary>
+    <LanguageProvider>
+      <TooltipProvider>
+        <div translate="no" className="notranslate">
+          <TranslationWarning />
+          <Toaster />
+          <Sonner />
+          <AppInner />
+          <InstallPrompt />
+        </div>
+      </TooltipProvider>
+    </LanguageProvider>
+  </ErrorBoundary>
 );
 
 export default App;

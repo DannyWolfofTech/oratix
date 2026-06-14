@@ -1,73 +1,91 @@
-# Welcome to your Lovable project
+# Oratix
 
-## Project info
+A browser-based **teleprompter + camera recorder** PWA, in Romanian. Write or
+paste a script, scroll it hands-free at an adjustable speed, and optionally
+record yourself with the front camera while you read. Recordings can be
+downloaded or shared straight to other apps. Works fully offline and installs
+to the home screen.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Tech stack
 
-## How can I edit this code?
+- **Vite** + **React 19** + **TypeScript** (strict)
+- **Tailwind CSS** + **shadcn/ui** (Radix primitives)
+- **Supabase** for optional auth + cloud sync (the app is fully usable without it)
+- **vite-plugin-pwa** (Workbox) for offline support and update prompts
+- **Vitest** + **Testing Library** for tests
+- Package manager: **bun**
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Getting started
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+bun install
+bun run dev        # http://localhost:8080
 ```
 
-**Edit a file directly in GitHub**
+> The dev server binds to `::` (IPv6) by default. On hosts without IPv6, run
+> `bun run dev -- --host 127.0.0.1`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Environment variables
 
-**Use GitHub Codespaces**
+Copy `.env.example` to `.env` and fill in your values:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+| Variable                         | Purpose                                             |
+| -------------------------------- | --------------------------------------------------- |
+| `VITE_SUPABASE_URL`              | Supabase project URL                                |
+| `VITE_SUPABASE_PUBLISHABLE_KEY`  | Supabase anon/publishable key (public by design)    |
+| `VITE_SUPABASE_PROJECT_ID`       | Supabase project ref                                |
 
-## What technologies are used for this project?
+`.env` is gitignored. **Cloud sync is optional** — if these are unset the app
+runs in local-only mode (scripts live in `localStorage`) and the sign-in entry
+point is hidden.
 
-This project is built with:
+## Scripts
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+| Command               | Description                                  |
+| --------------------- | -------------------------------------------- |
+| `bun run dev`         | Start the dev server                         |
+| `bun run build`       | Production build (emits a service worker)    |
+| `bun run preview`     | Preview the production build                 |
+| `bun run typecheck`   | Type-check with `tsc` (app + node configs)   |
+| `bun run lint`        | ESLint                                       |
+| `bun run lint:fix`    | ESLint with autofix                          |
+| `bun run format`      | Prettier write                               |
+| `bun run test`        | Run the Vitest suite                         |
+| `bun run test:watch`  | Vitest in watch mode                         |
 
-## How can I deploy this project?
+CI (`.github/workflows/ci.yml`) runs typecheck → lint → test → build on every
+push to `main` and on pull requests.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Data model & sync
 
-## Can I connect a custom domain to my Lovable project?
+Scripts are stored locally in `localStorage` and work offline. When Supabase is
+configured and a user signs in (email magic-link):
 
-Yes, you can!
+- Local/anonymous scripts are **claimed** into the account on first sign-in.
+- Reads/writes are mirrored to the `scripts` table; the newer `updated_at` wins
+  on conflict (see `src/lib/scriptsSync.ts`).
+- Each account's offline cache is namespaced per user, so two accounts on the
+  same device never see each other's scripts.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Row Level Security scopes every row to its owner (`auth.uid() = user_id`). See
+`supabase/migrations/` for the schema, policies, and indexes.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Project layout
+
+```
+src/
+  components/        UI + feature components (TeleprompterView, recording, dialogs)
+  components/ui/     shadcn/ui primitives
+  hooks/             useScripts (data layer), useAuth, useInstallPrompt, ...
+  lib/               recording.ts (MediaRecorder helpers), scriptsSync.ts
+  integrations/      Supabase client + generated types
+  pages/             Index, NotFound
+supabase/migrations/ SQL schema, RLS policies, indexes
+```
+
+## Deployment
+
+`bun run build` outputs a static site in `dist/` (including `sw.js` and
+`manifest.webmanifest`). Host it on any static host (Vercel, Netlify, Cloudflare
+Pages, etc.). Set the `VITE_SUPABASE_*` environment variables in the host if you
+want cloud sync.

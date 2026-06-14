@@ -72,30 +72,35 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
     // Track the URL created in this effect run so the cleanup can always revoke it,
     // regardless of whether setPreviewUrl has caused a re-render yet.
     let localUrl: string | null = null;
+    let cancelled = false;
+
+    const applyBlob = (b: Blob, mime: string, durationMs: number | null) => {
+      if (cancelled) return;
+      setActiveBlob(b);
+      setActiveMime(mime);
+      setDetectedDurationMs(durationMs);
+      localUrl = URL.createObjectURL(b);
+      setPreviewUrl(localUrl);
+    };
 
     const init = async () => {
-      if (blob && blob.size > 0) {
-        setActiveBlob(blob);
-        setActiveMime(mimeType);
-        setDetectedDurationMs(initialDetectedDurationMs);
-        await storeBlob(blob, mimeType, initialDetectedDurationMs);
-        localUrl = URL.createObjectURL(blob);
-        setPreviewUrl(localUrl);
-      } else {
-        // Try to recover from IndexedDB
-        const stored = await loadBlob();
-        if (stored) {
-          setActiveBlob(stored.blob);
-          setActiveMime(stored.mimeType);
-          setDetectedDurationMs(stored.detectedDurationMs ?? null);
-          localUrl = URL.createObjectURL(stored.blob);
-          setPreviewUrl(localUrl);
+      try {
+        if (blob && blob.size > 0) {
+          // Persist first (best effort) so a recovery is possible, then preview.
+          await storeBlob(blob, mimeType, initialDetectedDurationMs);
+          applyBlob(blob, mimeType, initialDetectedDurationMs);
+        } else {
+          const stored = await loadBlob();
+          if (stored) applyBlob(stored.blob, stored.mimeType, stored.detectedDurationMs ?? null);
         }
+      } catch (error) {
+        console.error("[Review] Failed to initialise recording", error);
       }
     };
     init();
 
     return () => {
+      cancelled = true;
       if (localUrl) URL.revokeObjectURL(localUrl);
     };
   }, [blob, initialDetectedDurationMs, mimeType]);

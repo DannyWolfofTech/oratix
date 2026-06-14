@@ -26,7 +26,10 @@ const TranslationWarning = () => {
     const observer = new MutationObserver(detect);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "lang"] });
     observer.observe(document.body, { attributes: true, childList: true, attributeFilter: ["class"] });
-    const interval = window.setInterval(detect, 2000);
+    // The MutationObserver above is the primary detector; this is a low-frequency
+    // safety-net poll for translate engines that mutate the DOM in ways the
+    // observer doesn't catch. 2s was needlessly busy for the app's lifetime.
+    const interval = window.setInterval(detect, 10000);
     return () => {
       observer.disconnect();
       window.clearInterval(interval);

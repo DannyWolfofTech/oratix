@@ -75,8 +75,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
   const pendingRecordRef = useRef(false);
-  // Used by startRecordAndScroll to kick off recording once the camera stream is available.
-  const pendingCameraRecordRef = useRef(false);
   const requestDataIntervalRef = useRef<number | null>(null);
 
   const clearRequestDataInterval = useCallback(() => {
@@ -436,15 +434,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     startPlayWithCountdown();
   }, [cameraStream, startPlayWithCountdown]);
 
-  // When startRecordAndScroll requested recording before the camera was open,
-  // trigger it now that cameraStream is available.
-  useEffect(() => {
-    if (cameraStream && pendingCameraRecordRef.current) {
-      pendingCameraRecordRef.current = false;
-      startRecording();
-    }
-  }, [cameraStream, startRecording]);
-
   const stopRecording = useCallback(() => {
     pendingRecordRef.current = false;
     const wasRecording = mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive";
@@ -462,17 +451,6 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setPlaying(false);
     setCountdown(null);
   }, [clearRequestDataInterval]);
-
-  const startRecordAndScroll = useCallback(async () => {
-    if (!cameraStream) {
-      // Set the flag BEFORE awaiting; the useEffect above will call startRecording()
-      // once cameraStream state is set, avoiding the stale-closure race condition.
-      pendingCameraRecordRef.current = true;
-      await openCamera();
-    } else {
-      startRecording();
-    }
-  }, [cameraStream, openCamera, startRecording]);
 
   // Cleanup camera + recorder on unmount. Without stopping the tracks here,
   // closing the teleprompter (X / Escape) while the camera is open leaves the

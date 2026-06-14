@@ -66,7 +66,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
-  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const speedRef = useRef(speed);
   const fontSizeRef = useRef(fontSize);
   const playingRef = useRef(playing);

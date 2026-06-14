@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { VitePWA } from "vite-plugin-pwa";
 import { writeFileSync, mkdirSync } from "fs";
 import { randomBytes } from "crypto";
 
@@ -35,7 +36,25 @@ export default defineConfig(({ mode }) => ({
       "Permissions-Policy": "camera=(self), microphone=(self), display-capture=(self)",
     },
   },
-  plugins: [react(), mode === "development" && componentTagger(), versionPlugin()].filter(Boolean),
+  plugins: [
+    react(),
+    mode === "development" && componentTagger(),
+    versionPlugin(),
+    VitePWA({
+      // Prompt the user to update instead of silently reloading — a force
+      // reload mid-recording would destroy an in-progress take.
+      registerType: "prompt",
+      injectRegister: null,
+      // Use the hand-written manifest already shipped in public/.
+      manifest: false,
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
+        // version.json must always hit the network so update detection works.
+        navigateFallbackDenylist: [/^\/version\.json/],
+        cleanupOutdatedCaches: true,
+      },
+    }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

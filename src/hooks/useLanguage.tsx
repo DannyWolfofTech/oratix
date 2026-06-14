@@ -124,6 +124,9 @@ const translations = {
   magicLinkSent: "Ți-am trimis un link de conectare pe email.",
   authError: "Conectarea a eșuat. Încearcă din nou.",
   syncedAccount: "Cont sincronizat",
+  // App update prompt
+  updateAvailable: "O versiune nouă este disponibilă.",
+  updateReload: "Reîncarcă",
 } as const;
 
 export type TranslationKey = keyof typeof translations;

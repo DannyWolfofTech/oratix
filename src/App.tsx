@@ -4,10 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import { AuthProvider } from "@/hooks/useAuth";
-import { useVersionCheck } from "@/hooks/useVersionCheck";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import PwaUpdatePrompt from "@/components/PwaUpdatePrompt";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -51,7 +51,6 @@ const TranslationWarning = () => {
 };
 
 const AppInner = () => {
-  useVersionCheck();
   return (
     <BrowserRouter>
       <Routes>
@@ -73,6 +72,7 @@ const App = () => (
             <Sonner />
             <AppInner />
             <InstallPrompt />
+            <PwaUpdatePrompt />
           </div>
         </TooltipProvider>
       </AuthProvider>

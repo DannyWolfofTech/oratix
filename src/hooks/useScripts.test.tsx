@@ -5,6 +5,19 @@ import { useScripts, MAX_CONTENT_LENGTH, MAX_TITLE_LENGTH } from "@/hooks/useScr
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
+// Run in local-only mode (no signed-in user) so these tests exercise the
+// localStorage path without touching Supabase.
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({
+    user: null,
+    session: null,
+    loading: false,
+    isConfigured: false,
+    signInWithEmail: vi.fn(),
+    signOut: vi.fn(),
+  }),
+}));
+
 const STORAGE_KEY = "teleprompter_scripts";
 
 beforeEach(() => {

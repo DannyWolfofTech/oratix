@@ -6,6 +6,7 @@ import ScriptList from "@/components/ScriptList";
 import ScriptEditor from "@/components/ScriptEditor";
 import TeleprompterView from "@/components/TeleprompterView";
 import AboutDialog from "@/components/AboutDialog";
+import AuthDialog from "@/components/AuthDialog";
 import { Clapperboard, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
@@ -70,6 +71,7 @@ const Index = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <AuthDialog />
           <AboutDialog />
         </div>
       </header>

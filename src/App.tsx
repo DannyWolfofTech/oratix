@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/hooks/useLanguage";
+import { AuthProvider } from "@/hooks/useAuth";
 import { useVersionCheck } from "@/hooks/useVersionCheck";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -64,15 +65,17 @@ const AppInner = () => {
 const App = () => (
   <ErrorBoundary>
     <LanguageProvider>
-      <TooltipProvider>
-        <div translate="no" className="notranslate">
-          <TranslationWarning />
-          <Toaster />
-          <Sonner />
-          <AppInner />
-          <InstallPrompt />
-        </div>
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <div translate="no" className="notranslate">
+            <TranslationWarning />
+            <Toaster />
+            <Sonner />
+            <AppInner />
+            <InstallPrompt />
+          </div>
+        </TooltipProvider>
+      </AuthProvider>
     </LanguageProvider>
   </ErrorBoundary>
 );

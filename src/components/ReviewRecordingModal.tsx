@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Download, X, Share2 } from "lucide-react";
+import { Download, Share2 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { measureBlobDuration } from "@/lib/recording";
 import { toast } from "sonner";
 import RecordingPreviewPlayer from "@/components/RecordingPreviewPlayer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const DB_NAME = "TelePromptRecordings";
 const STORE_NAME = "blobs";
@@ -225,21 +226,18 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div
-        className="relative w-full max-w-lg bg-background rounded-2xl border border-border shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-lg font-bold text-foreground">{t("reviewTitle")}</h2>
-          <button
-            onClick={handleDiscard}
-            className="p-2 rounded-full hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) handleDiscard();
+      }}
+    >
+      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-5 py-4 border-b border-border">
+          <DialogTitle className="text-lg font-bold text-foreground text-left">
+            {t("reviewTitle")}
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Video preview */}
         <div className="p-4">
@@ -257,7 +255,6 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
 
         {/* Actions */}
         <div className="px-5 pb-5 flex flex-col gap-3">
-          {/* Direct download button */}
           <button
             onClick={handleDownload}
             disabled={saving || !activeBlob}
@@ -267,7 +264,6 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
             {t("downloadVideo")}
           </button>
 
-          {/* Share to apps (Drive, Messenger, etc.) — only if browser can share files */}
           {canShareFiles && (
             <button
               onClick={handleSave}
@@ -286,13 +282,12 @@ const ReviewRecordingModal = ({ blob, mimeType, detectedDurationMs: initialDetec
             {t("discardRecording")}
           </button>
 
-          {/* Help hint */}
           <p className="text-xs text-muted-foreground text-center px-2 leading-relaxed">
             {t("reviewSaveHint")}
           </p>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

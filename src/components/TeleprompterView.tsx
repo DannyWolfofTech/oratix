@@ -444,7 +444,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         console.warn("[Recording] final requestData failed", error);
       }
       clearRequestDataInterval();
-      mediaRecorderRef.current!.stop();
+      mediaRecorderRef.current?.stop();
       setProcessingStage("processing");
     }
     setIsRecording(false);

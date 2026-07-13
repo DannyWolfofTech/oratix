@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { Download, X, Share2 } from "lucide-react";
+import { Download, Share2 } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
 import { measureBlobDuration } from "@/lib/recording";
 import { toast } from "sonner";
 import RecordingPreviewPlayer from "@/components/RecordingPreviewPlayer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const DB_NAME = "TelePromptRecordings";
 const STORE_NAME = "blobs";

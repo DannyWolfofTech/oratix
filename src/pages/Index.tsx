@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import ScriptList from "@/components/ScriptList";
 import ScriptEditor from "@/components/ScriptEditor";
 import TeleprompterView from "@/components/TeleprompterView";
+import { TeleprompterErrorBoundary } from "@/components/TeleprompterErrorBoundary";
 import AboutDialog from "@/components/AboutDialog";
 import AuthDialog from "@/components/AuthDialog";
 import { Clapperboard, ArrowLeft } from "lucide-react";
@@ -44,7 +45,11 @@ const Index = () => {
   };
 
   if (playingContent) {
-    return <TeleprompterView content={playingContent} onClose={() => setPlayingContent(null)} />;
+    return (
+      <TeleprompterErrorBoundary onReset={() => setPlayingContent(null)}>
+        <TeleprompterView content={playingContent} onClose={() => setPlayingContent(null)} />
+      </TeleprompterErrorBoundary>
+    );
   }
 
   // Mobile: show either list or editor, not both

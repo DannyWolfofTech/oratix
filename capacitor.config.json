@@ -1,0 +1,9 @@
+{
+  "appId": "app.lovable.a94e8eee31be41e686c053713d597f00",
+  "appName": "oratix",
+  "webDir": "dist",
+  "server": {
+    "url": "https://a94e8eee-31be-41e6-86c0-53713d597f00.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  }
+}

@@ -69,7 +69,10 @@ const translations = {
   startRecordAndScroll: "Inregistreaza si deruleaza",
   backToTop: "Inapoi sus",
   restartScroll: "Reia de la început",
+  pauseScroll: "Pauză",
+  resumeScroll: "Continuă",
   restartedScroll: "Text readus la început",
+
   togglePreview: "Comuta previzualizarea",
   openCamera: "Deschide Camera",
   closeCamera: "Închide Camera",

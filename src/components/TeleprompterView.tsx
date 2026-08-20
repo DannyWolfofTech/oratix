@@ -654,7 +654,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 <button
                   key={key}
                   onClick={() => setTextColor(key)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2.5 [@media(max-height:500px)]:px-3 [@media(max-height:500px)]:py-2 rounded-full text-sm font-medium transition-all ${
                     textColor === key
                       ? "bg-foreground text-background ring-2 ring-foreground/50 scale-105"
                       : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground"

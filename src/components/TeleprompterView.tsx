@@ -617,6 +617,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               >
                 {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </button>
+              <button
+                onClick={restartScroll}
+                aria-label={t("restartScroll")}
+                className="flex items-center gap-2 px-4 py-3 min-w-[44px] min-h-[44px] rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition flex items-center justify-center"
+              >
+                <ArrowUp className="w-4 h-4" />
+                <span className="hidden sm:inline">{t("restartScroll")}</span>
+              </button>
             </div>
             <button
               onClick={() => {

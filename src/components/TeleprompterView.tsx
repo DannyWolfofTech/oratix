@@ -154,6 +154,18 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setShowBackToTop(false);
   }, []);
 
+  // Restart: stop the automatic scroll and bring the text back to the top,
+  // keeping speed / size / color settings intact.
+  const restartScroll = useCallback(() => {
+    setPlaying(false);
+    setCountdown(null);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+    setShowBackToTop(false);
+    setShowControls(true);
+  }, []);
+
   // Font-relative scrolling via requestAnimationFrame
   useEffect(() => {
     let lastTime = performance.now();

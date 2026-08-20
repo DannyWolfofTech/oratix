@@ -590,7 +590,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         <div className="flex flex-col gap-3 max-w-3xl mx-auto [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:items-center [@media(max-height:500px)]:gap-x-6 [@media(max-height:500px)]:gap-y-2 [@media(max-height:500px)]:max-w-5xl">
 
           {/* Top row */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between [@media(max-height:500px)]:col-span-2">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {

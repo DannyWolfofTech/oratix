@@ -583,11 +583,12 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {/* Controls overlay */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`fixed top-0 left-0 right-0 z-[110] p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
+        className={`fixed top-0 left-0 right-0 z-[110] p-3 sm:p-4 [@media(max-height:500px)]:px-4 [@media(max-height:500px)]:py-2 transition-opacity duration-500 max-h-[60vh] [@media(max-height:500px)]:max-h-[80vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
-        <div className="flex flex-col gap-3 max-w-3xl mx-auto">
+        <div className="flex flex-col gap-3 max-w-3xl mx-auto [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:items-center [@media(max-height:500px)]:gap-x-6 [@media(max-height:500px)]:gap-y-2 [@media(max-height:500px)]:max-w-5xl">
+
           {/* Top row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

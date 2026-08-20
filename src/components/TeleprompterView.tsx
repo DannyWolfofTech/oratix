@@ -96,7 +96,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     }
   }, []);
 
+  // Persist preferences on every change so they survive refresh / new scripts
+  useEffect(() => {
+    saveTeleprompterSettings({ speed, fontSize, textColor });
+  }, [speed, fontSize, textColor]);
+
   // Keep refs in sync
+
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
   useEffect(() => { playingRef.current = playing; }, [playing]);

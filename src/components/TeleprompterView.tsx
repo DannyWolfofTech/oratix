@@ -38,10 +38,15 @@ const AUDIO_BITS_PER_SECOND = 128_000;
 const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const isMobile = useIsMobile();
   const { t } = useLanguage();
-  const [speed, setSpeed] = useState(1.5);
-  const [fontSize, setFontSize] = useState(() =>
-    window.innerWidth < MOBILE_BREAKPOINT_PX ? MOBILE_FONT_SIZE_PX : DESKTOP_FONT_SIZE_PX
+  const [storedSettings] = useState(() =>
+    loadTeleprompterSettings({
+      speed: 1.5,
+      fontSize: window.innerWidth < MOBILE_BREAKPOINT_PX ? MOBILE_FONT_SIZE_PX : DESKTOP_FONT_SIZE_PX,
+      textColor: "white",
+    })
   );
+  const [speed, setSpeed] = useState(storedSettings.speed);
+  const [fontSize, setFontSize] = useState(storedSettings.fontSize);
   const [playing, setPlaying] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showControls, setShowControls] = useState(true);
@@ -51,7 +56,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [cameraVisible, setCameraVisible] = useState(true);
   const [cameraMode, setCameraMode] = useState<"corner" | "fullscreen">("fullscreen");
   const [isTouching, setIsTouching] = useState(false);
-  const [textColor, setTextColor] = useState<"white" | "red" | "blue">("white");
+  const [textColor, setTextColor] = useState<TeleprompterTextColor>(storedSettings.textColor);
+
   const [isWebView] = useState(() => /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat/i.test(navigator.userAgent || ""));
   const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
   const [reviewMime, setReviewMime] = useState("");

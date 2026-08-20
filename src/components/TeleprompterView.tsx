@@ -8,6 +8,12 @@ import ReviewRecordingModal, { storeBlob, loadBlob } from "@/components/ReviewRe
 import { finalizeRecordingBlob, getPreferredRecordingMimeType, waitForFinalizationWindow } from "@/lib/recording";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  loadTeleprompterSettings,
+  saveTeleprompterSettings,
+  type TeleprompterTextColor,
+} from "@/lib/teleprompterSettings";
+
 
 interface TeleprompterViewProps {
   content: string;

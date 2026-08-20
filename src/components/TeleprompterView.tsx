@@ -196,6 +196,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         onClose();
       }
       if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
+      if (e.key === "r" || e.key === "R") { e.preventDefault(); restartScroll(); }
       if (e.key === "ArrowUp") setSpeed((s) => Math.min(Math.round((s + 0.1) * 10) / 10, 10));
       if (e.key === "ArrowDown") setSpeed((s) => Math.max(Math.round((s - 0.1) * 10) / 10, 0.5));
     };

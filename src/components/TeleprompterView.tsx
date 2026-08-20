@@ -817,7 +817,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         onMouseLeave={() => setIsTouching(false)}
       >
         <div
-          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[20vh] pb-[140vh] ${isFullscreenCamera ? "bg-black/30 backdrop-blur-[2px] rounded-2xl" : ""}`}
+          className={`max-w-4xl mx-auto px-4 sm:px-8 [@media(max-height:500px)]:px-[8%] pt-[20vh] [@media(max-height:500px)]:pt-[34vh] pb-[140vh] [@media(max-height:500px)]:text-center ${isFullscreenCamera ? "bg-black/30 backdrop-blur-[2px] rounded-2xl" : ""}`}
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p

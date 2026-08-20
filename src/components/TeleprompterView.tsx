@@ -794,7 +794,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       )}
 
       {/* Reading guide */}
-      <div className="absolute left-0 right-0 z-[24] pointer-events-none" style={{ top: '18%' }}>
+      <div className="absolute left-0 right-0 z-[24] pointer-events-none top-[18%] [@media(max-height:500px)]:top-[34%]">
         <div className="w-full h-1 bg-foreground/10 rounded-full" />
       </div>
 

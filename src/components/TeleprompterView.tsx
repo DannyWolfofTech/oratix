@@ -154,6 +154,18 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     setShowBackToTop(false);
   }, []);
 
+  // Restart: stop the automatic scroll and bring the text back to the top,
+  // keeping speed / size / color settings intact.
+  const restartScroll = useCallback(() => {
+    setPlaying(false);
+    setCountdown(null);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+    setShowBackToTop(false);
+    setShowControls(true);
+  }, []);
+
   // Font-relative scrolling via requestAnimationFrame
   useEffect(() => {
     let lastTime = performance.now();
@@ -184,12 +196,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         onClose();
       }
       if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
+      if (e.key === "r" || e.key === "R") { e.preventDefault(); restartScroll(); }
       if (e.key === "ArrowUp") setSpeed((s) => Math.min(Math.round((s + 0.1) * 10) / 10, 10));
       if (e.key === "ArrowDown") setSpeed((s) => Math.max(Math.round((s - 0.1) * 10) / 10, 0.5));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, restartScroll]);
 
   // Mouse wheel speed control
   useEffect(() => {
@@ -604,6 +617,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
               >
                 {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </button>
+              <button
+                onClick={restartScroll}
+                aria-label={t("restartScroll")}
+                className="flex items-center gap-2 px-4 py-3 min-w-[44px] min-h-[44px] rounded-full text-sm font-medium bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground transition flex items-center justify-center"
+              >
+                <ArrowUp className="w-4 h-4" />
+                <span className="hidden sm:inline">{t("restartScroll")}</span>
+              </button>
             </div>
             <button
               onClick={() => {
@@ -850,6 +871,22 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
           </button>
         </div>
       )}
+
+      {/* Always-available restart: stops the auto-scroll and returns to the top,
+          also reachable while controls are hidden during playback. */}
+      {countdown === null && (
+        <div className="fixed bottom-6 right-4 z-[120] pointer-events-auto">
+          <button
+            onClick={(e) => { e.stopPropagation(); restartScroll(); }}
+            aria-label={t("restartScroll")}
+            title={t("restartScroll")}
+            className="w-12 h-12 min-w-[44px] min-h-[44px] rounded-full bg-background/60 backdrop-blur-md border border-white/15 text-foreground shadow-lg hover:bg-background/80 transition flex items-center justify-center"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
 
       {/* Bottom hint */}
       <div className={`absolute bottom-0 left-0 right-0 z-30 p-3 text-center transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>

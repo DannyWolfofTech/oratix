@@ -68,6 +68,8 @@ const translations = {
   cameraNotAvailable: "Camera nu este disponibila",
   startRecordAndScroll: "Inregistreaza si deruleaza",
   backToTop: "Inapoi sus",
+  restartScroll: "Reia de la început",
+  restartedScroll: "Text readus la început",
   togglePreview: "Comuta previzualizarea",
   openCamera: "Deschide Camera",
   closeCamera: "Închide Camera",

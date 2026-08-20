@@ -8,6 +8,12 @@ import ReviewRecordingModal, { storeBlob, loadBlob } from "@/components/ReviewRe
 import { finalizeRecordingBlob, getPreferredRecordingMimeType, waitForFinalizationWindow } from "@/lib/recording";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import {
+  loadTeleprompterSettings,
+  saveTeleprompterSettings,
+  type TeleprompterTextColor,
+} from "@/lib/teleprompterSettings";
+
 
 interface TeleprompterViewProps {
   content: string;
@@ -38,10 +44,15 @@ const AUDIO_BITS_PER_SECOND = 128_000;
 const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const isMobile = useIsMobile();
   const { t } = useLanguage();
-  const [speed, setSpeed] = useState(1.5);
-  const [fontSize, setFontSize] = useState(() =>
-    window.innerWidth < MOBILE_BREAKPOINT_PX ? MOBILE_FONT_SIZE_PX : DESKTOP_FONT_SIZE_PX
+  const [storedSettings] = useState(() =>
+    loadTeleprompterSettings({
+      speed: 1.5,
+      fontSize: window.innerWidth < MOBILE_BREAKPOINT_PX ? MOBILE_FONT_SIZE_PX : DESKTOP_FONT_SIZE_PX,
+      textColor: "white",
+    })
   );
+  const [speed, setSpeed] = useState(storedSettings.speed);
+  const [fontSize, setFontSize] = useState(storedSettings.fontSize);
   const [playing, setPlaying] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showControls, setShowControls] = useState(true);
@@ -51,7 +62,8 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
   const [cameraVisible, setCameraVisible] = useState(true);
   const [cameraMode, setCameraMode] = useState<"corner" | "fullscreen">("fullscreen");
   const [isTouching, setIsTouching] = useState(false);
-  const [textColor, setTextColor] = useState<"white" | "red" | "blue">("white");
+  const [textColor, setTextColor] = useState<TeleprompterTextColor>(storedSettings.textColor);
+
   const [isWebView] = useState(() => /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat/i.test(navigator.userAgent || ""));
   const [reviewBlob, setReviewBlob] = useState<Blob | null>(null);
   const [reviewMime, setReviewMime] = useState("");
@@ -84,7 +96,13 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     }
   }, []);
 
+  // Persist preferences on every change so they survive refresh / new scripts
+  useEffect(() => {
+    saveTeleprompterSettings({ speed, fontSize, textColor });
+  }, [speed, fontSize, textColor]);
+
   // Keep refs in sync
+
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
   useEffect(() => { playingRef.current = playing; }, [playing]);
@@ -565,13 +583,14 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       {/* Controls overlay */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`fixed top-0 left-0 right-0 z-[110] p-3 sm:p-4 transition-opacity duration-500 max-h-[60vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
+        className={`fixed top-0 left-0 right-0 z-[110] p-3 sm:p-4 [@media(max-height:500px)]:px-4 [@media(max-height:500px)]:py-2 transition-opacity duration-500 max-h-[60vh] [@media(max-height:500px)]:max-h-[80vh] overflow-y-auto bg-background/40 backdrop-blur-xl border-b border-white/10 shadow-lg ${
           showControls ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
-        <div className="flex flex-col gap-3 max-w-3xl mx-auto">
+        <div className="flex flex-col gap-3 max-w-3xl mx-auto [@media(max-height:500px)]:grid [@media(max-height:500px)]:grid-cols-2 [@media(max-height:500px)]:items-center [@media(max-height:500px)]:gap-x-6 [@media(max-height:500px)]:gap-y-2 [@media(max-height:500px)]:max-w-5xl">
+
           {/* Top row */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between [@media(max-height:500px)]:col-span-2">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
@@ -635,7 +654,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
                 <button
                   key={key}
                   onClick={() => setTextColor(key)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2.5 [@media(max-height:500px)]:px-3 [@media(max-height:500px)]:py-2 rounded-full text-sm font-medium transition-all ${
                     textColor === key
                       ? "bg-foreground text-background ring-2 ring-foreground/50 scale-105"
                       : "bg-secondary/50 hover:bg-secondary/80 border border-white/5 text-foreground"
@@ -775,7 +794,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
       )}
 
       {/* Reading guide */}
-      <div className="absolute left-0 right-0 z-[24] pointer-events-none" style={{ top: '18%' }}>
+      <div className="absolute left-0 right-0 z-[24] pointer-events-none top-[18%] [@media(max-height:500px)]:top-[34%]">
         <div className="w-full h-1 bg-foreground/10 rounded-full" />
       </div>
 
@@ -798,7 +817,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         onMouseLeave={() => setIsTouching(false)}
       >
         <div
-          className={`max-w-4xl mx-auto px-4 sm:px-8 pt-[20vh] pb-[140vh] ${isFullscreenCamera ? "bg-black/30 backdrop-blur-[2px] rounded-2xl" : ""}`}
+          className={`max-w-4xl mx-auto px-4 sm:px-8 [@media(max-height:500px)]:px-[8%] pt-[20vh] [@media(max-height:500px)]:pt-[34vh] pb-[140vh] [@media(max-height:500px)]:text-center ${isFullscreenCamera ? "bg-black/30 backdrop-blur-[2px] rounded-2xl" : ""}`}
           style={{ fontSize: `${fontSize}px`, lineHeight: "1.5" }}
         >
           <p

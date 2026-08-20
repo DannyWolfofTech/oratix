@@ -202,7 +202,7 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, restartScroll]);
 
   // Mouse wheel speed control
   useEffect(() => {

@@ -872,6 +872,22 @@ const TeleprompterView = ({ content, onClose }: TeleprompterViewProps) => {
         </div>
       )}
 
+      {/* Always-available restart: stops the auto-scroll and returns to the top,
+          also reachable while controls are hidden during playback. */}
+      {countdown === null && (
+        <div className="fixed bottom-6 right-4 z-[120] pointer-events-auto">
+          <button
+            onClick={(e) => { e.stopPropagation(); restartScroll(); }}
+            aria-label={t("restartScroll")}
+            title={t("restartScroll")}
+            className="w-12 h-12 min-w-[44px] min-h-[44px] rounded-full bg-background/60 backdrop-blur-md border border-white/15 text-foreground shadow-lg hover:bg-background/80 transition flex items-center justify-center"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+
       {/* Bottom hint */}
       <div className={`absolute bottom-0 left-0 right-0 z-30 p-3 text-center transition-opacity duration-500 ${showControls ? "opacity-100" : "opacity-0"}`}>
         <p className="text-xs text-muted-foreground">
